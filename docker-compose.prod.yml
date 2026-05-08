@@ -1,0 +1,64 @@
+version: '3.8'
+# ============================================
+# Resume+ 生产部署 — 最小依赖版
+# 适合学生服务器（2核4G）
+# 去掉了 MinIO / Elasticsearch / RabbitMQ
+# ============================================
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: resume-plus-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: ry_ai
+      MYSQL_CHARACTER_SET_SERVER: utf8mb4
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+    ports:
+      - "127.0.0.1:3306:3306"    # 仅本地访问，不暴露外网
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./sql/resume_table.sql:/docker-entrypoint-initdb.d/01-resume.sql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: resume-plus-redis
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: resume-plus-pgvector
+    environment:
+      POSTGRES_DB: ruoyi_vector
+      POSTGRES_USER: ruoyi
+      POSTGRES_PASSWORD: ${PGVECTOR_PASSWORD}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - pgvector-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    container_name: resume-plus-gotenberg
+    ports:
+      - "127.0.0.1:3000:3000"
+    command:
+      - "gotenberg"
+      - "--chromium-disable-javascript=true"
+      - "--chromium-allow-list=^file:///.*$|^http://localhost:.*$"
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
+  redis-data:
+  pgvector-data:
