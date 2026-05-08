@@ -198,19 +198,226 @@ ports:
   - "127.0.0.1:3306:3306"   # 不会暴露到公网
 ```
 
-### 开启 HTTPS（建议）
+### 开启 HTTPS（必做）
+
+没有 HTTPS，面试官打开你项目第一眼就是「不安全」三个大字。Let's Encrypt 免费，配一次管三个月自动续。
 
 ```bash
-# 安装 certbot
+# 1. 安装 certbot
 sudo apt install -y certbot python3-certbot-nginx
 
-# 申请证书（需要有域名）
+# 2. 申请证书（需要有域名指向你的服务器 IP）
 sudo certbot --nginx -d your-domain.com
+
+# 3. 测试自动续期
+sudo certbot renew --dry-run
+```
+
+> **没有域名？** 买个最便宜的，`.xyz` 首年 ¥6，`.top` 首年 ¥7。阿里云/腾讯云都能买。
+> Certbot 会自动修改 Nginx 配置并添加定时续期任务，配完就不用管了。
+
+验证 HTTPS 是否生效：
+
+```bash
+curl -I https://your-domain.com
+# 返回 200 且 SSL 证书信息正确即可
 ```
 
 ---
 
-## 六、日常维护
+## 六、日志管理（防磁盘写满）
+
+学生服务器最常见的故障就是日志把磁盘撑爆。一键配好，永不担心。
+
+### Nginx 日志轮转
+
+系统自带 logrotate，默认已配 Nginx，检查一下：
+
+```bash
+cat /etc/logrotate.d/nginx
+# 应该有：
+# /var/log/nginx/*.log {
+#     weekly          # 每周轮转
+#     rotate 4        # 保留 4 周
+#     compress        # 压缩旧日志
+# }
+```
+
+### 后端日志轮转
+
+```bash
+sudo cat > /etc/logrotate.d/resume-plus-backend << 'EOF'
+/opt/resume-plus/logs/*.log {
+    daily
+    rotate 7
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}
+EOF
+
+# 手动测试
+sudo logrotate -d /etc/logrotate.d/resume-plus-backend
+```
+
+### Docker 容器日志（最大 100MB，保留 3 份）
+
+```bash
+# 全局配置所有新容器不超过 100MB
+sudo cat > /etc/docker/daemon.json << 'EOF'
+{
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "100m",
+    "max-file": "3"
+  }
+}
+EOF
+
+# 重启 Docker 使配置生效
+sudo systemctl restart docker
+
+# 对已运行的容器手动清理（可选）
+docker system prune -f --volumes
+```
+
+> 配好以后登录服务器看一眼 `df -h`，磁盘使用率应该长期稳定在 60% 以下。
+
+---
+
+## 七、数据库备份（防数据丢失）
+
+简历数据是用户的心血。自动备份，每天一次，保留 7 天。
+
+### 备份脚本
+
+```bash
+sudo mkdir -p /opt/resume-plus/backups
+
+sudo cat > /opt/resume-plus/backup.sh << 'BACKUP'
+#!/bin/bash
+# Resume+ 自动备份脚本
+# 备份 MySQL + PostgreSQL，保留 7 天
+
+BACKUP_DIR="/opt/resume-plus/backups"
+RETENTION_DAYS=7
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+
+# 加载环境变量
+source /opt/resume-plus/.env 2>/dev/null
+
+# 备份 MySQL
+echo "[$(date)] 开始备份 MySQL..."
+docker exec resume-plus-mysql mysqldump -u root -p"${MYSQL_PASSWORD}" --all-databases \
+  | gzip > "${BACKUP_DIR}/mysql_${TIMESTAMP}.sql.gz"
+
+# 备份 PostgreSQL（向量数据）
+echo "[$(date)] 开始备份 PostgreSQL..."
+docker exec resume-plus-postgres pg_dump -U ruoyi ruoyi_vector \
+  | gzip > "${BACKUP_DIR}/pgsql_${TIMESTAMP}.sql.gz"
+
+# 删除过期备份
+find "${BACKUP_DIR}" -name "mysql_*.sql.gz" -mtime +${RETENTION_DAYS} -delete
+find "${BACKUP_DIR}" -name "pgsql_*.sql.gz" -mtime +${RETENTION_DAYS} -delete
+
+# 记录备份大小
+echo "[$(date)] 备份完成，大小："
+du -sh "${BACKUP_DIR}/mysql_${TIMESTAMP}.sql.gz"
+du -sh "${BACKUP_DIR}/pgsql_${TIMESTAMP}.sql.gz"
+BACKUP
+
+sudo chmod +x /opt/resume-plus/backup.sh
+```
+
+### 加入定时任务（每天凌晨 3 点）
+
+```bash
+sudo crontab -e
+# 加入这行：
+0 3 * * * /opt/resume-plus/backup.sh >> /opt/resume-plus/backups/backup.log 2>&1
+```
+
+### 远程备份（可选，建议多一层保障）
+
+```bash
+# 安装 rclone（支持阿里云OSS/腾讯云COS/S3）
+sudo apt install -y rclone
+
+# 配好之后每天同步到云端
+# crontab 再加一行：
+30 3 * * * rclone sync /opt/resume-plus/backups remote:resume-plus-backups
+```
+
+> **备份恢复测试：**
+> ```bash
+> # MySQL 恢复
+> gunzip < /opt/resume-plus/backups/mysql_20260508_030001.sql.gz | docker exec -i resume-plus-mysql mysql -u root -p"${MYSQL_PASSWORD}"
+>
+> # PostgreSQL 恢复
+> gunzip < /opt/resume-plus/backups/pgsql_20260508_030001.sql.gz | docker exec -i resume-plus-postgres psql -U ruoyi ruoyi_vector
+> ```
+
+---
+
+## 八、监控告警（防宕机不知情）
+
+### UptimeRobot（免费，5 分钟检测一次）
+
+```bash
+# 1. 去 https://uptimerobot.com 注册
+# 2. 添加监控器：
+#    - Monitor Type: HTTP(s)
+#    - URL: https://你的域名
+#    - Interval: 5 minutes
+# 3. 设置告警方式：Email 免费，Telegram/Slack 也支持
+```
+
+配上之后，服务挂了 5 分钟内你会收到邮件。
+
+### 自建健康检查端点
+
+项目本身有 `/health` 端点，Nginx 直接返回：
+
+```bash
+# 测试
+curl http://localhost/health
+# 返回: healthy
+```
+
+### 自定义监控脚本（可选）
+
+```bash
+sudo cat > /opt/resume-plus/monitor.sh << 'MONITOR'
+#!/bin/bash
+# Resume+ 健康检查脚本
+# 检查后端、数据库、磁盘空间
+
+# 1. 检查后端
+if ! curl -sf http://localhost/health > /dev/null; then
+    echo "[$(date)] 后端无响应，尝试重启..." >> /opt/resume-plus/monitor.log
+    systemctl restart resume-plus-backend
+fi
+
+# 2. 检查磁盘（超过 85% 发告警）
+USAGE=$(df / | awk 'NR==2 {print $5}' | sed 's/%//')
+if [ "$USAGE" -gt 85 ]; then
+    echo "[$(date)] 磁盘使用率 ${USAGE}%，需要关注" >> /opt/resume-plus/monitor.log
+fi
+MONITOR
+
+sudo chmod +x /opt/resume-plus/monitor.sh
+
+# 每 10 分钟跑一次
+sudo crontab -e
+# 加入：
+*/10 * * * * /opt/resume-plus/monitor.sh
+```
+
+---
+
+## 九、日常维护
 
 ### 查看日志
 
@@ -257,7 +464,7 @@ sudo systemctl restart resume-plus-backend
 
 ---
 
-## 七、故障排查
+## 十、故障排查
 
 | 问题 | 排查方法 |
 |------|---------|
@@ -270,7 +477,7 @@ sudo systemctl restart resume-plus-backend
 
 ---
 
-## 八、费用总结
+## 十、费用总结
 
 以阿里云 2核4G 学生机为例：
 
