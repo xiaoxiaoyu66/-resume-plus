@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.ruoyi.web.controller.ai.mapper.InternProjectMapper">
+
+    <resultMap id="InternProjectResult" type="com.ruoyi.web.controller.ai.domain.InternProject">
+        <id property="id" column="id"/>
+        <result property="profileId" column="profile_id"/>
+        <result property="projectName" column="project_name"/>
+        <result property="startDate" column="start_date"/>
+        <result property="endDate" column="end_date"/>
+        <result property="role" column="role"/>
+        <result property="description" column="description"/>
+        <result property="sortOrder" column="sort_order"/>
+        <result property="deleted" column="deleted"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <sql id="selectProjectVo">
+        SELECT id, profile_id, project_name, start_date, end_date, role, description, sort_order, deleted, create_time, update_time
+        FROM intern_project
+    </sql>
+
+    <select id="selectProjectListByProfileId" parameterType="Long" resultMap="InternProjectResult">
+        <include refid="selectProjectVo"/>
+        WHERE profile_id = #{profileId} AND deleted = 0 ORDER BY sort_order ASC
+    </select>
+
+    <insert id="insertProject" parameterType="com.ruoyi.web.controller.ai.domain.InternProject" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO intern_project
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="profileId != null">profile_id,</if>
+            <if test="projectName != null and projectName != ''">project_name,</if>
+            <if test="startDate != null">start_date,</if>
+            <if test="endDate != null">end_date,</if>
+            <if test="role != null">role,</if>
+            <if test="description != null">description,</if>
+            <if test="sortOrder != null">sort_order,</if>
+            <if test="deleted != null">deleted,</if>
+            create_time, update_time
+        </trim>
+        <trim prefix="VALUES (" suffix=")" suffixOverrides=",">
+            <if test="profileId != null">#{profileId},</if>
+            <if test="projectName != null and projectName != ''">#{projectName},</if>
+            <if test="startDate != null">#{startDate},</if>
+            <if test="endDate != null">#{endDate},</if>
+            <if test="role != null">#{role},</if>
+            <if test="description != null">#{description},</if>
+            <if test="sortOrder != null">#{sortOrder},</if>
+            <if test="deleted != null">#{deleted},</if>
+            now(), now()
+        </trim>
+    </insert>
+
+    <update id="updateProject" parameterType="com.ruoyi.web.controller.ai.domain.InternProject">
+        UPDATE intern_project
+        <set>
+            <if test="projectName != null">project_name = #{projectName},</if>
+            <if test="startDate != null">start_date = #{startDate},</if>
+            <if test="endDate != null">end_date = #{endDate},</if>
+            <if test="role != null">role = #{role},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            update_time = now()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteProjectByProfileId" parameterType="Long">
+        DELETE FROM intern_project WHERE profile_id = #{profileId}
+    </delete>
+
+    <delete id="deleteProjectById" parameterType="Long">
+        DELETE FROM intern_project WHERE id = #{id}
+    </delete>
+
+</mapper>

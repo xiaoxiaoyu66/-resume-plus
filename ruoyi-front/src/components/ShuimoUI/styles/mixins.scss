@@ -1,0 +1,231 @@
+/**
+ * 水墨画风格 UI Mixins
+ */
+
+// 水墨渐变背景
+@mixin ink-wash-bg($direction: 180deg, $opacity: 0.05) {
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(14, 50, 101, $opacity) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(10, 30, 61, $opacity * 0.6) 0%, transparent 50%),
+    linear-gradient($direction, $paper-light 0%, $paper-mid 100%);
+}
+
+// 纸张纹理
+@mixin paper-texture() {
+  background-image:
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  background-blend-mode: overlay;
+  opacity: 0.03;
+}
+
+// 印章效果
+@mixin seal($color: $accent-red, $size: 32px) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  border: 2px solid $color;
+  color: $color;
+  border-radius: 4px;
+  font-size: $size * 0.375;
+  font-weight: 600;
+  transform: rotate(-3deg);
+  font-family: $font-family;
+}
+
+// 水墨边框
+@mixin ink-border($color: $border-mid, $width: 1px) {
+  border: $width solid $color;
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -$width;
+    left: 10%;
+    right: 10%;
+    height: $width * 2;
+    background: linear-gradient(90deg, transparent 0%, $color 50%, transparent 100%);
+    opacity: 0.5;
+  }
+}
+
+// 卷轴装饰
+@mixin scroll-decoration() {
+  position: relative;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, $ink-primary 0%, transparent 20%, transparent 80%, $ink-primary 100%);
+    opacity: 0.2;
+  }
+
+  &::before { top: 0; }
+  &::after { bottom: 0; }
+}
+
+// 按钮水墨效果
+@mixin ink-button($variant: 'primary') {
+  position: relative;
+  overflow: hidden;
+  transition: all $transition-base;
+  font-family: $font-family;
+
+  @if $variant == 'primary' {
+    background: linear-gradient(135deg, $ink-primary 0%, $ink-primary-light 100%);
+    color: $paper-white;
+    border: none;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px $shadow-strong;
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+  } @else if $variant == 'secondary' {
+    background: transparent;
+    color: $ink-mid;
+    border: 1px solid $border-mid;
+
+    &:hover {
+      background: rgba(14, 50, 101, 0.05);
+      border-color: $ink-light;
+    }
+  } @else if $variant == 'accent' {
+    background: $accent-red;
+    color: white;
+    border: none;
+
+    &:hover {
+      background: darken($accent-red, 10%);
+      transform: translateY(-2px);
+    }
+  }
+
+  // 水墨涟漪效果
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+  }
+
+  &:active::after {
+    width: 200%;
+    height: 200%;
+  }
+}
+
+// 卡片水墨风格
+@mixin ink-card() {
+  background: $paper-white;
+  border: 1px solid $border-light;
+  border-radius: $radius-md;
+  box-shadow: 0 2px 8px $shadow-soft;
+  transition: all $transition-base;
+
+  &:hover {
+    box-shadow: 0 4px 16px $shadow-mid;
+  }
+}
+
+// 输入框宣纸风格
+@mixin ink-input() {
+  background: $paper-white;
+  border: 1px solid $border-mid;
+  border-radius: $radius-sm;
+  transition: all $transition-fast;
+
+  &:focus {
+    border-color: $ink-primary;
+    box-shadow: 0 0 0 3px rgba(14, 50, 101, 0.08);
+  }
+
+  &::placeholder {
+    color: $ink-pale;
+  }
+}
+
+// 文字渐变
+@mixin text-gradient($start: $ink-primary, $end: $ink-primary-light) {
+  background: linear-gradient(135deg, $start 0%, $end 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+// 加载动画 - 研墨构思
+@mixin thinking-animation() {
+  display: inline-flex;
+  gap: 4px;
+
+  span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: $ink-light;
+    animation: ink-drop-think 1.4s infinite ease-in-out;
+
+    &:nth-child(2) { animation-delay: 0.2s; }
+    &:nth-child(3) { animation-delay: 0.4s; }
+  }
+}
+
+@keyframes ink-drop-think {
+  0%, 80%, 100% {
+    transform: translateY(0);
+    opacity: 0.3;
+  }
+  40% {
+    transform: translateY(-8px);
+    opacity: 1;
+  }
+}
+
+// 消息气泡
+@mixin message-bubble($role: 'user') {
+  max-width: 70%;
+  padding: 14px 18px;
+  border-radius: 12px;
+  line-height: 1.7;
+  font-size: $font-size-base;
+  position: relative;
+  word-break: break-word;
+  box-shadow: 0 1px 4px $shadow-soft;
+
+  @if $role == 'user' {
+    background: linear-gradient(135deg, $ink-primary 0%, $ink-primary-light 100%);
+    color: $paper-white;
+    border-bottom-right-radius: 4px;
+  } @else {
+    background: $paper-white;
+    color: $ink-deep;
+    border: 1px solid $border-light;
+    border-bottom-left-radius: 4px;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: -1px;
+      left: 8px;
+      right: 40%;
+      height: 2px;
+      background: linear-gradient(90deg, $ink-primary 0%, transparent 100%);
+      border-radius: 1px;
+      opacity: 0.3;
+    }
+  }
+}

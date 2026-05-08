@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.ruoyi.web.controller.ai.mapper.InternProfileMapper">
+
+    <resultMap id="InternProfileResult" type="com.ruoyi.web.controller.ai.domain.InternProfile">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="name" column="name"/>
+        <result property="school" column="school"/>
+        <result property="major" column="major"/>
+        <result property="education" column="education"/>
+        <result property="graduationYear" column="graduation_year"/>
+        <result property="phone" column="phone"/>
+        <result property="email" column="email"/>
+        <result property="selfIntro" column="self_intro"/>
+        <result property="skills" column="skills"/>
+        <result property="deleted" column="deleted"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <sql id="selectProfileVo">
+        SELECT id, user_id, name, school, major, education, graduation_year, phone, email, self_intro, skills, deleted, create_time, update_time
+        FROM intern_profile
+    </sql>
+
+    <select id="selectProfileByUserId" parameterType="Long" resultMap="InternProfileResult">
+        <include refid="selectProfileVo"/>
+        WHERE user_id = #{userId} AND deleted = 0
+    </select>
+
+    <insert id="insertProfile" parameterType="com.ruoyi.web.controller.ai.domain.InternProfile" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO intern_profile
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            user_id,
+            <if test="name != null and name != ''">name,</if>
+            <if test="school != null and school != ''">school,</if>
+            <if test="major != null and major != ''">major,</if>
+            <if test="education != null and education != ''">education,</if>
+            <if test="graduationYear != null">graduation_year,</if>
+            <if test="phone != null">phone,</if>
+            <if test="email != null">email,</if>
+            <if test="selfIntro != null">self_intro,</if>
+            <if test="skills != null">skills,</if>
+            <if test="deleted != null">deleted,</if>
+            create_time, update_time
+        </trim>
+        <trim prefix="VALUES (" suffix=")" suffixOverrides=",">
+            #{userId},
+            <if test="name != null and name != ''">#{name},</if>
+            <if test="school != null and school != ''">#{school},</if>
+            <if test="major != null and major != ''">#{major},</if>
+            <if test="education != null and education != ''">#{education},</if>
+            <if test="graduationYear != null">#{graduationYear},</if>
+            <if test="phone != null">#{phone},</if>
+            <if test="email != null">#{email},</if>
+            <if test="selfIntro != null">#{selfIntro},</if>
+            <if test="skills != null">#{skills},</if>
+            <if test="deleted != null">#{deleted},</if>
+            now(), now()
+        </trim>
+    </insert>
+
+    <update id="updateProfile" parameterType="com.ruoyi.web.controller.ai.domain.InternProfile">
+        UPDATE intern_profile
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="school != null">school = #{school},</if>
+            <if test="major != null">major = #{major},</if>
+            <if test="education != null">education = #{education},</if>
+            <if test="graduationYear != null">graduation_year = #{graduationYear},</if>
+            <if test="phone != null">phone = #{phone},</if>
+            <if test="email != null">email = #{email},</if>
+            <if test="selfIntro != null">self_intro = #{selfIntro},</if>
+            <if test="skills != null">skills = #{skills},</if>
+            update_time = now()
+        </set>
+        WHERE user_id = #{userId}
+    </update>
+
+</mapper>

@@ -1,0 +1,84 @@
+package com.ruoyi.framework.config;
+
+import com.ruoyi.common.utils.Threads;
+import org.apache.commons.lang3.concurrent.BasicThreadFactory;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadPoolExecutor;
+
+/**
+ * 线程池配置
+ *
+ * @author ruoyi
+ **/
+@Configuration
+@EnableAsync
+public class ThreadPoolConfig
+{
+    // 核心线程池大小
+    private int corePoolSize = 50;
+
+    // 最大可创建的线程数
+    private int maxPoolSize = 200;
+
+    // 队列最大长度
+    private int queueCapacity = 1000;
+
+    // 线程池维护线程所允许的空闲时间
+    private int keepAliveSeconds = 300;
+
+    @Bean(name = "threadPoolTaskExecutor")
+    public ThreadPoolTaskExecutor threadPoolTaskExecutor()
+    {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setMaxPoolSize(maxPoolSize);
+        executor.setCorePoolSize(corePoolSize);
+        executor.setQueueCapacity(queueCapacity);
+        executor.setKeepAliveSeconds(keepAliveSeconds);
+        // 线程池对拒绝任务(无线程可用)的处理策略
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        return executor;
+    }
+
+    /**
+     * AI 专用线程池 — 与业务线程池隔离
+     * 防止大量 AI 请求占满 Tomcat 线程导致服务卡死
+     */
+    @Bean(name = "aiTaskExecutor")
+    public ThreadPoolTaskExecutor aiTaskExecutor()
+    {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(8);
+        executor.setMaxPoolSize(16);
+        executor.setQueueCapacity(50);
+        executor.setKeepAliveSeconds(60);
+        executor.setThreadNamePrefix("ai-task-");
+        // AI 请求排队满时直接拒绝（由调用方处理降级）
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
+        executor.initialize();
+        return executor;
+    }
+
+    /**
+     * 执行周期性或定时任务
+     */
+    @Bean(name = "scheduledExecutorService")
+    protected ScheduledExecutorService scheduledExecutorService()
+    {
+        return new ScheduledThreadPoolExecutor(corePoolSize,
+            BasicThreadFactory.builder().namingPattern("schedule-pool-%d").daemon(true).build(),
+            new ThreadPoolExecutor.CallerRunsPolicy())
+        {
+            @Override
+            protected void afterExecute(Runnable r, Throwable t)
+            {
+                super.afterExecute(r, t);
+                Threads.printException(r, t);
+            }
+        };
+    }
+}

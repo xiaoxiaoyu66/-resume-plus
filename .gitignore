@@ -1,0 +1,82 @@
+# ============================================
+# 依赖 & 构建产物
+# ============================================
+node_modules/
+target/
+dist/
+build/
+
+# ============================================
+# 密钥/凭证文件（禁止提交！）
+# ============================================
+AccessKey.csv
+*.key
+key/
+nacos-config/*.yaml
+nacos-config/*.yml
+**/wx.properties
+DeepSeekApi.md
+AIweb*.md
+微信扫码登录.md
+
+# ============================================
+# 环境变量
+# ============================================
+.env
+.env.*
+!.env.example
+
+# ============================================
+# 日志
+# ============================================
+logs/
+*.log
+
+# ============================================
+# IDE & 编辑器
+# ============================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*.iml
+.classpath
+.project
+.settings
+.springBeans
+
+# ============================================
+# 操作系统
+# ============================================
+.DS_Store
+Thumbs.db
+
+# ============================================
+# 个人 / 非项目文件
+# ============================================
+开发日报/
+简历模板/
+算法/
+若依front/
+部署脚本/
+scripts/
+static/
+elasticsearch/
+rabbitmq/
+redis/
+nacos-config/
+Rsume+.pdf
+网站演示.mp4
+dev.bat
+dev.ps1
+restart-back.bat
+restart-front.bat
+start-simple.sh
+Dockerfile.backend
+Dockerfile.frontend
+ruoyi-backend/ruoyi-ui/
+ruoyi-backend/bin/
+ruoyi-backend/doc/
+ruoyi-backend/logs/
+ruoyi-backend/node_modules/
+ruoyi-backend/sql/

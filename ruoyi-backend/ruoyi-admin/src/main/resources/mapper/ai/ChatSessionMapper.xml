@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.ruoyi.web.controller.ai.mapper.ChatSessionMapper">
+
+    <resultMap id="ChatSessionResult" type="com.ruoyi.web.controller.ai.domain.ChatSession">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="sessionTitle" column="session_title"/>
+        <result property="modelType" column="model_type"/>
+        <result property="scene" column="scene"/>
+        <result property="resumeId" column="resume_id"/>
+        <result property="jobId" column="job_id"/>
+        <result property="status" column="status"/>
+        <result property="totalTokens" column="total_tokens"/>
+        <result property="deleted" column="deleted"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <sql id="selectSessionVo">
+        SELECT id, user_id, session_title, model_type, scene, resume_id, job_id, status, total_tokens, deleted, create_time, update_time
+        FROM chat_session
+    </sql>
+
+    <select id="selectSessionById" parameterType="Long" resultMap="ChatSessionResult">
+        <include refid="selectSessionVo"/>
+        WHERE id = #{id} AND deleted = 0
+    </select>
+
+    <select id="selectSessionList" parameterType="com.ruoyi.web.controller.ai.domain.ChatSession" resultMap="ChatSessionResult">
+        <include refid="selectSessionVo"/>
+        WHERE deleted = 0
+        <if test="userId != null"> AND user_id = #{userId}</if>
+        <if test="status != null"> AND status = #{status}</if>
+        ORDER BY update_time DESC
+    </select>
+
+    <insert id="insertSession" parameterType="com.ruoyi.web.controller.ai.domain.ChatSession" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO chat_session
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="sessionTitle != null and sessionTitle != ''">session_title,</if>
+            <if test="modelType != null and modelType != ''">model_type,</if>
+            <if test="scene != null and scene != ''">scene,</if>
+            <if test="resumeId != null">resume_id,</if>
+            <if test="jobId != null">job_id,</if>
+            <if test="status != null">status,</if>
+            <if test="totalTokens != null">total_tokens,</if>
+            <if test="deleted != null">deleted,</if>
+            create_time, update_time
+        </trim>
+        <trim prefix="VALUES (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="sessionTitle != null and sessionTitle != ''">#{sessionTitle},</if>
+            <if test="modelType != null and modelType != ''">#{modelType},</if>
+            <if test="scene != null and scene != ''">#{scene},</if>
+            <if test="resumeId != null">#{resumeId},</if>
+            <if test="jobId != null">#{jobId},</if>
+            <if test="status != null">#{status},</if>
+            <if test="totalTokens != null">#{totalTokens},</if>
+            <if test="deleted != null">#{deleted},</if>
+            now(), now()
+        </trim>
+    </insert>
+
+    <update id="updateSession" parameterType="com.ruoyi.web.controller.ai.domain.ChatSession">
+        UPDATE chat_session
+        <set>
+            <if test="sessionTitle != null and sessionTitle != ''">session_title = #{sessionTitle},</if>
+            <if test="modelType != null and modelType != ''">model_type = #{modelType},</if>
+            <if test="scene != null and scene != ''">scene = #{scene},</if>
+            <if test="resumeId != null">resume_id = #{resumeId},</if>
+            <if test="jobId != null">job_id = #{jobId},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="totalTokens != null">total_tokens = #{totalTokens},</if>
+            update_time = now()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <update id="deleteSessionById" parameterType="Long">
+        UPDATE chat_session SET deleted = 1, update_time = now() WHERE id = #{id}
+    </update>
+
+</mapper>

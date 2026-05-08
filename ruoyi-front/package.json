@@ -1,0 +1,35 @@
+{
+  "name": "ruoyi-front",
+  "version": "1.0.0",
+  "description": "若依 AI 助手前端 - 水墨画风格",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@element-plus/icons-vue": "^2.3.0",
+    "axios": "^1.6.0",
+    "element-plus": "^2.5.0",
+    "html2canvas": "^1.4.1",
+    "highlight.js": "^11.11.1",
+    "js-cookie": "^3.0.5",
+    "marked": "^18.0.2",
+    "pinia": "^2.1.0",
+    "qrcode": "^1.5.0",
+    "sortablejs": "^1.15.0",
+    "vue": "^3.4.0",
+    "vue-router": "^4.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.0",
+    "jsdom": "^29.1.1",
+    "sass": "^1.70.0",
+    "typescript": "^6.0.3",
+    "vite": "^5.0.0",
+    "vitest": "^4.1.5"
+  }
+}

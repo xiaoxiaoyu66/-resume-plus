@@ -1,0 +1,29 @@
+# Elasticsearch 和 RabbitMQ 配置
+# Kali 虚拟机地址: 192.168.132.136
+
+---
+# Elasticsearch 配置
+elasticsearch:
+  host: 192.168.132.136
+  port: 9200
+  scheme: http
+  connection-timeout: 5000
+  socket-timeout: 30000
+
+---
+# RabbitMQ 配置
+spring:
+  rabbitmq:
+    host: 192.168.132.136
+    port: 5672
+    username: admin
+    password: ${RABBITMQ_PASSWORD}
+    virtual-host: /
+    connection-timeout: 5000
+    listener:
+      simple:
+        acknowledge-mode: manual
+        prefetch: 10
+        concurrency: 3
+        max-concurrency: 10
+        default-requeue-rejected: false

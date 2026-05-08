@@ -1,0 +1,65 @@
+/**
+ * 水墨画风格 UI 变量系统
+ * 基于 RGB(14, 50, 101) 靛蓝墨韵主色调
+ */
+
+// 主色调 - 靛蓝墨韵
+$ink-primary: #0E3265;
+$ink-primary-dark: #0A1E3D;
+$ink-primary-light: #1a4a7a;
+$ink-primary-pale: #2d5a8a;
+
+// 墨色层级
+$ink-deep: #0A1E3D;      // 浓墨 - 标题、重点
+$ink-mid: #0E3265;       // 中墨 - 主色
+$ink-light: #4a6a8a;     // 淡墨 - 次要文字
+$ink-pale: #8aa0b8;      // 清墨 - 辅助
+
+// 纸张色系
+$paper-deep: #E8E3D8;    // 深宣纸
+$paper-mid: #F0EBE0;     // 中宣纸
+$paper-light: #F5F0E8;   // 浅宣纸
+$paper-white: #FAF8F5;   // 白纸
+
+// 点缀色
+$accent-red: #C45C48;    // 朱砂红 - 印章、重点
+$accent-gold: #B8956A;   // 金箔 - 装饰
+$accent-green: #5A8A6A;  // 石绿 - 成功
+
+// 阴影
+$shadow-soft: rgba(14, 50, 101, 0.08);
+$shadow-mid: rgba(14, 50, 101, 0.12);
+$shadow-strong: rgba(14, 50, 101, 0.2);
+
+// 边框
+$border-light: rgba(14, 50, 101, 0.1);
+$border-mid: rgba(14, 50, 101, 0.2);
+$border-strong: rgba(14, 50, 101, 0.3);
+
+// 字体
+$font-family: 'Noto Serif SC', 'Source Han Serif SC', 'SimSun', serif;
+$font-size-xs: 12px;
+$font-size-sm: 13px;
+$font-size-base: 14px;
+$font-size-md: 16px;
+$font-size-lg: 18px;
+$font-size-xl: 20px;
+$font-size-xxl: 24px;
+
+// 间距
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 16px;
+$spacing-lg: 24px;
+$spacing-xl: 32px;
+
+// 圆角
+$radius-sm: 4px;
+$radius-md: 8px;
+$radius-lg: 12px;
+$radius-xl: 16px;
+
+// 过渡
+$transition-fast: 0.2s ease;
+$transition-base: 0.3s ease;
+$transition-slow: 0.5s ease;

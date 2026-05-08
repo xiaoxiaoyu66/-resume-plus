@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>岗位批量导入 - 历时诊</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --primary: #0E3265; --primary-light: #1a4a8a;
+  --accent: #C45C48; --success: #2e7d32;
+  --bg: #f5f5f0; --card: #ffffff;
+  --text: #252525; --text-mid: #4a4a4a; --text-pale: #888888;
+  --border: #e0ddd5; --radius: 8px;
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.6;
+  min-height: 100vh; display: flex; flex-direction: column;
+}
+.header {
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: white; padding: 24px 32px; display: flex; align-items: center; gap: 16px;
+}
+.header h1 { font-size: 22px; font-weight: 700; letter-spacing: 2px; }
+.header .subtitle { font-size: 13px; opacity: 0.7; margin-top: 2px; }
+.container { max-width: 960px; margin: 0 auto; padding: 24px 16px; flex: 1; width: 100%; }
+.card {
+  background: var(--card); border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  padding: 24px; margin-bottom: 20px;
+}
+.card-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text); }
+.tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.tab {
+  padding: 10px 20px; border: none; background: none; font-size: 14px; color: var(--text-pale);
+  cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s;
+  display: flex; align-items: center; gap: 6px;
+}
+.tab:hover { color: var(--text-mid); }
+.tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 500; }
+.textarea-wrap { margin-bottom: 12px; }
+.textarea-wrap textarea {
+  width: 100%; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius);
+  font-family: 'SF Mono','Consolas','Courier New',monospace; font-size: 13px; line-height: 1.6;
+  color: var(--text); background: #fafaf8; resize: vertical; outline: none;
+  transition: border-color 0.2s;
+}
+.textarea-wrap textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(14,50,101,0.08); }
+.tip { font-size: 12px; color: var(--text-pale); margin-bottom: 8px; }
+.tip .link { color: var(--primary); cursor: pointer; text-decoration: underline; }
+.tip .link:hover { color: var(--primary-light); }
+.dropzone {
+  border: 2px dashed var(--border); border-radius: 12px; padding: 48px 20px;
+  text-align: center; cursor: pointer; transition: all 0.2s; position: relative;
+}
+.dropzone:hover { border-color: var(--primary); background: rgba(14,50,101,0.02); }
+.dropzone.dragover { border-color: var(--primary); background: rgba(14,50,101,0.04); transform: scale(1.01); }
+.dropzone input[type=file] { display: none; }
+.dropzone .icon { font-size: 40px; margin-bottom: 12px; }
+.dropzone .main-text { font-size: 15px; color: var(--text-mid); }
+.dropzone .main-text .highlight { color: var(--primary); font-weight: 500; }
+.dropzone .hint { font-size: 12px; color: var(--text-pale); margin-top: 6px; }
+.file-info {
+  display: flex; align-items: center; gap: 8px; margin-top: 12px;
+  padding: 10px 14px; background: rgba(14,50,101,0.04); border: 1px solid rgba(14,50,101,0.1);
+  border-radius: var(--radius); font-size: 13px; color: var(--text-mid);
+}
+.file-info .remove { margin-left: auto; cursor: pointer; color: var(--text-pale); font-size: 18px; line-height: 1; }
+.file-info .remove:hover { color: var(--accent); }
+.btn-row { display: flex; gap: 12px; justify-content: flex-end; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+.btn {
+  padding: 10px 28px; border-radius: var(--radius); font-size: 14px; font-weight: 500;
+  cursor: pointer; transition: all 0.2s; border: none; letter-spacing: 1px;
+}
+.btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(14,50,101,0.25); }
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(14,50,101,0.35); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.btn-cancel { background: rgba(14,50,101,0.06); color: var(--text-mid); }
+.btn-cancel:hover { background: rgba(14,50,101,0.1); }
+.preview-info { font-size: 14px; color: var(--text-mid); margin-bottom: 12px; }
+.preview-info strong { color: var(--primary); }
+.table-wrap { overflow-x: auto; margin-bottom: 12px; max-height: 360px; overflow-y: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { background: rgba(14,50,101,0.04); color: var(--text-pale); font-weight: 500; padding: 8px 10px; text-align: left; white-space: nowrap; border-bottom: 1px solid rgba(14,50,101,0.08); position: sticky; top: 0; }
+td { padding: 8px 10px; color: var(--text-mid); border-bottom: 1px solid rgba(14,50,101,0.05); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+tr:hover td { background: rgba(14,50,101,0.02); }
+.import-errors { background: rgba(196,92,72,0.06); border: 1px solid rgba(196,92,72,0.15); border-radius: var(--radius); padding: 12px 16px; margin-bottom: 12px; }
+.import-errors .title { font-size: 13px; font-weight: 600; color: var(--accent); margin-bottom: 4px; }
+.import-errors .item { font-size: 12px; color: var(--text-mid); line-height: 1.8; padding-left: 8px; }
+.result { text-align: center; padding: 24px 0; }
+.result-icon { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; margin: 0 auto 16px; }
+.result-icon.ok { background: rgba(14,50,101,0.1); color: var(--primary); }
+.result-icon.warn { background: rgba(196,92,72,0.1); color: var(--accent); }
+.result-stats { display: flex; align-items: center; justify-content: center; gap: 24px; margin-bottom: 16px; }
+.stat { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.stat .num { font-size: 28px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.stat .label { font-size: 12px; color: var(--text-pale); }
+.stat.success .num { color: var(--success); }
+.stat.fail .num { color: var(--accent); }
+.stat-divider { width: 1px; height: 36px; background: rgba(14,50,101,0.1); }
+.result-errors { text-align: left; background: rgba(196,92,72,0.06); border: 1px solid rgba(196,92,72,0.15); border-radius: var(--radius); padding: 12px 16px; margin: 0 20px; }
+.spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; margin-right: 6px; vertical-align: middle; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.status-bar { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: var(--radius); font-size: 13px; margin-bottom: 16px; }
+.status-bar.info { background: rgba(14,50,101,0.06); color: var(--primary); }
+.status-bar.success { background: rgba(46,125,50,0.06); color: var(--success); }
+.status-bar.error { background: rgba(196,92,72,0.06); color: var(--accent); }
+.status-bar .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.status-bar.info .dot { background: var(--primary); }
+.status-bar.success .dot { background: var(--success); }
+.status-bar.error .dot { background: var(--accent); }
+.footer { text-align: center; padding: 20px; font-size: 12px; color: var(--text-pale); }
+
+/* ====== 全局选项卡（导入/管理） ====== */
+.global-tabs { display: flex; gap: 0; margin-bottom: 20px; border-bottom: 2px solid var(--border); }
+.global-tab {
+  padding: 12px 28px; border: none; background: none; font-size: 15px; color: var(--text-pale);
+  cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px;
+  transition: all 0.2s; font-weight: 500;
+}
+.global-tab:hover { color: var(--text-mid); }
+.global-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+/* ====== 管理视图 ====== */
+.manage-toolbar { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+.manage-search-input {
+  flex: 1; padding: 9px 14px; border: 1px solid var(--border); border-radius: var(--radius);
+  font-size: 13px; outline: none; font-family: inherit;
+}
+.manage-search-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(14,50,101,0.08); }
+.manage-stats { font-size: 13px; color: var(--text-pale); white-space: nowrap; }
+.manage-stats strong { color: var(--text-mid); }
+.manage-pagination { display: flex; justify-content: center; padding: 16px 0 0; gap: 6px; }
+.manage-pagination button {
+  padding: 6px 12px; border: 1px solid var(--border); border-radius: 4px;
+  background: white; font-size: 13px; cursor: pointer; color: var(--text-mid);
+}
+.manage-pagination button:hover { border-color: var(--primary); color: var(--primary); }
+.manage-pagination button.active { background: var(--primary); color: white; border-color: var(--primary); }
+.manage-pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+.manage-btn { padding: 5px 12px; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; transition: all 0.15s; }
+.manage-btn-edit { background: rgba(14,50,101,0.08); color: var(--primary); }
+.manage-btn-edit:hover { background: rgba(14,50,101,0.15); }
+.manage-btn-del { background: rgba(196,92,72,0.08); color: var(--accent); }
+.manage-btn-del:hover { background: rgba(196,92,72,0.18); }
+.manage-btn-del:disabled { opacity: 0.4; cursor: not-allowed; background: rgba(196,92,72,0.04); }
+.batch-del-btn { padding: 6px 16px; font-size: 13px; border-radius: 4px; border: none; cursor: pointer; }
+.manage-batch-bar {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 10px; padding: 8px 0;
+  border-bottom: 1px solid var(--border); font-size: 13px;
+}
+.manage-checkbox-label { display: flex; align-items: center; gap: 4px; cursor: pointer; color: var(--text-mid); user-select: none; }
+.manage-checkbox-label input { cursor: pointer; }
+.manage-selected-count { font-size: 12px; color: var(--text-pale); flex: 1; }
+.manage-body-checkbox { text-align: center; }
+.manage-body-checkbox input { cursor: pointer; width: 16px; height: 16px; }
+
+/* ====== 编辑弹窗（Modal） ====== */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal {
+  background: white; border-radius: 12px; width: 640px; max-width: 94vw;
+  max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 16px 48px rgba(0,0,0,0.2);
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 24px; border-bottom: 1px solid var(--border);
+}
+.modal-title { font-size: 18px; font-weight: 600; color: var(--text); }
+.modal-close { background: none; border: none; font-size: 20px; color: var(--text-pale); cursor: pointer; padding: 4px; }
+.modal-close:hover { color: var(--accent); }
+.modal-body { padding: 20px 24px; overflow-y: auto; flex: 1; }
+.modal-footer {
+  display: flex; gap: 12px; justify-content: flex-end;
+  padding: 16px 24px; border-top: 1px solid var(--border);
+}
+.form-row { display: flex; gap: 16px; margin-bottom: 14px; }
+.form-group { flex: 1; margin-bottom: 14px; }
+.form-group label { display: block; font-size: 13px; color: var(--text-mid); font-weight: 500; margin-bottom: 5px; }
+.form-group .required { color: var(--accent); }
+.form-input {
+  width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius);
+  font-size: 13px; outline: none; font-family: inherit; background: white;
+}
+.form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(14,50,101,0.08); }
+.form-textarea {
+  width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius);
+  font-size: 13px; outline: none; font-family: inherit; resize: vertical; background: white;
+}
+.form-textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(14,50,101,0.08); }
+.form-row .form-group { margin-bottom: 0; }
+
+/* ====== 列映射配置 ====== */
+.mapping-tip { font-size: 13px; color: var(--text-pale); margin-bottom: 12px; }
+.mapping-table-wrap { overflow-x: auto; }
+.mapping-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.mapping-table th {
+  background: rgba(14,50,101,0.04); color: var(--text-pale); font-weight: 500;
+  padding: 8px 12px; text-align: left; border-bottom: 1px solid rgba(14,50,101,0.08);
+}
+.mapping-table td { padding: 6px 12px; border-bottom: 1px solid rgba(14,50,101,0.05); }
+.mapping-table td.field-label { font-weight: 500; color: var(--text); white-space: nowrap; }
+.mapping-table td.field-label .required { color: var(--accent); }
+.mapping-table select {
+  width: 100%; padding: 6px 10px; border: 1px solid var(--border); border-radius: 4px;
+  font-size: 13px; background: white; cursor: pointer; outline: none;
+}
+.mapping-table select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(14,50,101,0.08); }
+.mapping-table td.preview-cell { font-size: 12px; color: var(--text-pale); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60px; }
+
+.steps { display: flex; align-items: center; justify-content: center; gap: 0; margin-bottom: 20px; }
+.step { display: flex; align-items: center; gap: 8px; color: var(--text-pale); font-size: 13px; transition: color 0.3s; }
+.step-num { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--text-pale); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; transition: all 0.3s; }
+.step.active { color: var(--primary); }
+.step.active .step-num { border-color: var(--primary); color: var(--primary); }
+.step.done { color: var(--primary); }
+.step.done .step-num { background: var(--primary); border-color: var(--primary); color: white; }
+.step-line { width: 40px; height: 1px; background: var(--text-pale); opacity: 0.3; margin: 0 8px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>岗位批量导入</h1>
+    <div class="subtitle">江城聘 · 重庆 AI 岗位聚合</div>
+  </div>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+    <span id="authBadge" style="font-size:11px;padding:3px 10px;border-radius:4px;background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.8);">认证无需</span>
+  </div>
+</div>
+
+<div class="container">
+  <div id="statusBar" class="status-bar info" style="display:none;">
+    <span class="dot"></span>
+    <span id="statusText">就绪</span>
+  </div>
+
+  <div class="global-tabs">
+    <button class="global-tab active" onclick="switchGlobalTab('import')">&#x1F4E5; 导入</button>
+    <button class="global-tab" onclick="switchGlobalTab('manage')">&#x1F4CB; 管理</button>
+  </div>
+
+  <div id="importView">
+
+  <div class="steps">
+    <div id="step1" class="step active"><span class="step-num">1</span><span class="step-label">准备数据</span></div>
+    <div class="step-line"></div>
+    <div id="step2" class="step"><span class="step-num">2</span><span class="step-label">预览确认</span></div>
+    <div class="step-line"></div>
+    <div id="step3" class="step"><span class="step-num">3</span><span class="step-label">导入结果</span></div>
+  </div>
+
+  <!-- 步骤 1 -->
+  <div id="step1Content">
+    <div class="card">
+      <div class="tabs">
+        <button class="tab active" data-tab="json"><span>📝</span> JSON 编辑</button>
+        <button class="tab" data-tab="csv"><span>📊</span> CSV 上传</button>
+      </div>
+
+      <!-- JSON -->
+      <div id="tabJson" class="tab-content">
+        <div class="tip">
+          粘贴岗位 JSON 数组，每条必须包含 <strong>title</strong>（职位名称）。
+          <span class="link" onclick="fillJsonSample()">插入示例</span>
+        </div>
+        <div class="textarea-wrap">
+          <textarea id="jsonInput" rows="14" placeholder='[{"title":"...","company":"...","salaryMin":9000,...}]'></textarea>
+        </div>
+      </div>
+
+      <!-- CSV -->
+      <div id="tabCsv" class="tab-content" style="display:none;">
+        <div class="tip">
+          上传 CSV 文件，然后手动配置各列对应的字段。
+          <span class="link" onclick="fillCsvSample()">格式说明</span>
+        </div>
+        <div class="dropzone" id="csvDropzone">
+          <input type="file" id="csvFileInput" accept=".csv">
+          <div class="icon">&#x1F4CA;</div>
+          <div class="main-text">拖拽 CSV 文件到此处，或 <span class="highlight">点击选择</span></div>
+          <div class="hint">支持 .csv 格式，UTF-8 编码</div>
+        </div>
+        <div id="csvFileInfo" class="file-info" style="display:none;">
+          <span>&#x1F4C4;</span><span id="csvFileName"></span>
+          <span class="remove" onclick="clearCsvFile()">&#x2715;</span>
+        </div>
+
+        <!-- 列映射配置 -->
+        <div id="csvMapping" style="display:none; margin-top: 16px;">
+          <div class="card-title">列映射配置</div>
+          <div class="mapping-tip">为每个字段选择对应的 CSV 列。标 <span class="required">*</span> 为必填。</div>
+          <div class="mapping-table-wrap">
+            <table class="mapping-table">
+              <thead><tr><th style="width:100px;">系统字段</th><th>CSV 列</th><th style="width:60px;">预览</th></tr></thead>
+              <tbody id="mappingBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="previewData()">预览数据</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 步骤 2 -->
+  <div id="step2Content" style="display:none;">
+    <div class="card">
+      <div class="preview-info" id="previewInfo">共解析出 <strong>0</strong> 条岗位数据</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>职位名称</th><th>公司</th><th>薪资</th><th>地点</th><th>学历</th><th>经验</th><th>岗位职责</th><th>招聘要求</th><th>来源</th></tr></thead>
+          <tbody id="previewBody"></tbody>
+        </table>
+      </div>
+      <div id="previewErrors" class="import-errors" style="display:none;">
+        <div class="title">⚠ 解析警告</div>
+        <div id="previewErrorList"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="btn-row">
+        <button class="btn btn-cancel" onclick="goStep1()">返回修改</button>
+        <button class="btn btn-primary" id="importBtn" onclick="doImport()">确认导入</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 步骤 3 -->
+  <div id="step3Content" style="display:none;">
+    <div class="card">
+      <div id="resultArea" class="result">
+        <div id="resultIcon" class="result-icon ok">✓</div>
+        <div class="result-stats">
+          <div class="stat"><span class="num" id="rTotal">0</span><span class="label">总数</span></div>
+          <div class="stat-divider"></div>
+          <div class="stat success"><span class="num" id="rSuccess">0</span><span class="label">成功</span></div>
+          <div class="stat-divider"></div>
+          <div class="stat fail"><span class="num" id="rFail">0</span><span class="label">失败</span></div>
+        </div>
+        <div id="resultErrors" class="result-errors" style="display:none;"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="btn-row">
+        <button class="btn btn-cancel" onclick="resetAll()">继续导入</button>
+        <button class="btn btn-primary" onclick="goStep1()">完成</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- ========== 管理视图 ========== -->
+<div id="manageView" style="display:none;">
+  <div class="card">
+    <div class="card-title">&#x1F4CB; 已导入岗位管理</div>
+    <div class="manage-toolbar">
+      <input type="text" id="manageSearch" class="manage-search-input" placeholder="搜索职位名称 / 公司…" oninput="debounceManageSearch()" />
+      <span class="manage-stats">共 <strong id="manageTotal">0</strong> 条</span>
+    </div>
+    <div class="manage-batch-bar" id="manageBatchBar">
+      <label class="manage-checkbox-label" title="全选/取消全选">
+        <input type="checkbox" id="manageCheckAll" onchange="toggleAllCheckboxes()" />
+        <span>全选</span>
+      </label>
+      <span class="manage-selected-count" id="manageSelectedCount">已选 0 项</span>
+      <button class="manage-btn manage-btn-del batch-del-btn" id="batchDelBtn" onclick="batchDelete()" disabled>批量删除</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th style="width:36px;"><input type="checkbox" id="manageCheckAllHead" onchange="toggleAllCheckboxes()" /></th>
+          <th>职位名称</th><th>公司</th><th>薪资</th><th>地点</th><th>学历</th><th>发布时间</th><th style="width:130px;">操作</th>
+        </tr></thead>
+        <tbody id="manageBody"></tbody>
+      </table>
+    </div>
+    <div id="managePagination" class="manage-pagination"></div>
+  </div>
+</div>
+
+<!-- ========== 编辑弹窗 ========== -->
+<div id="editModal" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">编辑岗位</h3>
+      <button class="modal-close" onclick="closeEditModal()">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editId" />
+      <div class="form-row">
+        <div class="form-group"><label>职位名称 <span class="required">*</span></label><input id="editTitle" class="form-input" /></div>
+        <div class="form-group"><label>公司名称</label><input id="editCompany" class="form-input" /></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>最低薪资（元/月）</label><input id="editSalaryMin" class="form-input" type="number" /></div>
+        <div class="form-group"><label>最高薪资（元/月）</label><input id="editSalaryMax" class="form-input" type="number" /></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>地点</label><input id="editLocation" class="form-input" /></div>
+        <div class="form-group"><label>学历要求</label>
+          <select id="editEducation" class="form-input">
+            <option value="">不限</option><option>本科</option><option>硕士</option><option>博士</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>经验要求</label><input id="editExperience" class="form-input" /></div>
+        <div class="form-group"><label>来源类型</label>
+          <select id="editSourceType" class="form-input">
+            <option value="0">官方</option><option value="1" selected>商业平台</option><option value="2">其他</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label>技能标签（JSON 数组）</label><input id="editTags" class="form-input" placeholder='["LLM","Python"]' /></div>
+      <div class="form-group"><label>岗位职责</label><textarea id="editDescription" class="form-textarea" rows="3"></textarea></div>
+      <div class="form-group"><label>招聘要求</label><textarea id="editRequirements" class="form-textarea" rows="3"></textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label>来源名称</label><input id="editSource" class="form-input" /></div>
+        <div class="form-group"><label>原始链接</label><input id="editSourceUrl" class="form-input" placeholder="https://" /></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-cancel" onclick="closeEditModal()">取消</button>
+      <button class="btn btn-primary" id="saveEditBtn" onclick="saveEdit()">保存修改</button>
+    </div>
+  </div>
+</div>
+
+<div class="footer">历时诊 · 以墨为引 · 以智为舟</div>
+
+<script>
+const API_BASE = '/api';
+let parsedJobs = [];
+let parseErrors = [];
+let currentTab = 'json';
+let csvHeaders = [];   // CSV 列名列表
+let csvRawText = '';   // CSV 原始文本
+
+// 系统字段定义（用于 CSV 列映射）
+var SYSTEM_FIELDS = [
+  { key: 'title', label: '职位名称', required: true, keywords: ['station-name', 'text-cut', '职位', '岗位', '名称', 'title', 'position'] },
+  { key: 'company', label: '公司名称', keywords: ['company', '公司', 'corp'] },
+  { key: 'salary', label: '薪资', keywords: ['salary', 'money', '薪资', '薪酬', '工资', '薪水', 'right-salary'] },
+  { key: 'location', label: '工作地点', keywords: ['address', 'addr', '地点', '地区', '区域', '地址', 'location'] },
+  { key: 'education', label: '学历要求', keywords: ['education', '学历', 'degree', 'left-tag-item'] },
+  { key: 'experience', label: '经验要求', keywords: ['exp', '经验', '工作年限'] },
+  { key: 'description', label: '岗位职责', keywords: ['desc', '描述', '职责', '介绍', 'content'] },
+  { key: 'requirements', label: '招聘要求', keywords: ['requirement', '要求', '任职', '资格'] },
+  { key: 'publishTime', label: '发布时间', keywords: ['time', '时间', '日期', 'date', 'job_time'] },
+  { key: 'sourceUrl', label: '原始链接', keywords: ['href', 'link', 'url', '链接'] },
+  { key: 'source', label: '来源名称', keywords: ['source', '来源'] }
+];
+
+// ====== Tab ======
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', function() {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    this.classList.add('active');
+    currentTab = this.dataset.tab;
+    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+    document.getElementById('tab' + currentTab.charAt(0).toUpperCase() + currentTab.slice(1)).style.display = '';
+  });
+});
+
+// ====== CSV file ======
+const csvDropzone = document.getElementById('csvDropzone');
+const csvInput = document.getElementById('csvFileInput');
+csvDropzone.addEventListener('dragover', e => { e.preventDefault(); csvDropzone.classList.add('dragover'); });
+csvDropzone.addEventListener('dragleave', () => csvDropzone.classList.remove('dragover'));
+csvDropzone.addEventListener('drop', e => { e.preventDefault(); csvDropzone.classList.remove('dragover'); if (e.dataTransfer.files[0]) readCsv(e.dataTransfer.files[0]); });
+csvInput.addEventListener('change', e => { if (e.target.files[0]) readCsv(e.target.files[0]); });
+
+function readCsv(file) {
+  if (!file.name.endsWith('.csv')) { showStatus('请选择 .csv 格式的文件', 'error'); return; }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var text = e.target.result;
+    csvRawText = text;
+    csvInput.dataset.content = text;
+    document.getElementById('csvFileInfo').style.display = 'flex';
+    document.getElementById('csvFileName').textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+
+    // 只解析第一行获取列名
+    var firstLine = text.split(/\r?\n/)[0];
+    if (!firstLine || !firstLine.trim()) {
+      showStatus('CSV 文件为空', 'error');
+      return;
+    }
+    csvHeaders = [];
+    var field = '';
+    var inQuotes = false;
+    for (var i = 0; i < firstLine.length; i++) {
+      var ch = firstLine[i];
+      if (ch === '"') { inQuotes = !inQuotes; continue; }
+      if (ch === ',' && !inQuotes) { csvHeaders.push(field.trim()); field = ''; continue; }
+      field += ch;
+    }
+    csvHeaders.push(field.trim());
+
+    // 取第一行数据作为预览
+    var rows = parseCsvRows(text);
+    var sampleRow = rows.length > 1 ? rows[1] : [];
+
+    renderColumnMapping(sampleRow);
+    showStatus('已读取 ' + csvHeaders.length + ' 列，请配置字段映射', 'info');
+    // 自动切换到映射区
+    document.getElementById('csvMapping').scrollIntoView({ behavior: 'smooth' });
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+function clearCsvFile() {
+  document.getElementById('csvFileInfo').style.display = 'none';
+  document.getElementById('csvFileName').textContent = '';
+  csvInput.value = '';
+  csvInput.dataset.content = '';
+  csvHeaders = [];
+  csvRawText = '';
+  document.getElementById('csvMapping').style.display = 'none';
+}
+
+// ====== Samples ======
+function fillJsonSample() {
+  document.getElementById('jsonInput').value = JSON.stringify([
+    { title: 'AI 研发工程师', company: '重庆中邮信科集团', salaryMin: 9000, salaryMax: 15000, location: '渝北区', education: '本科', experience: '应届', tags: ['LLM','PyTorch','RAG'], description: '负责大模型应用开发', requirements: '本科及以上学历', source: '手动录入', sourceType: 2, publishTime: '2026-05-01' },
+    { title: '人工智能工程师', company: '重庆数字资源集团', salaryMin: 15000, salaryMax: 25000, location: '两江新区', education: '硕士', experience: '应届', tags: ['深度学习','NLP'], source: '官方发布', sourceType: 0 }
+  ], null, 2);
+}
+function fillCsvSample() {
+  showStatus('上传 CSV 文件后，手动配置各列对应的系统字段即可解析', 'info');
+}
+
+/** 解析 "8千-1.2万" / "6千-1.2万" / "1万-1.5万" / "4千-6千" / "薪资面议" */
+function parseSalary(s) {
+  if (!s) return { min: null, max: null };
+  s = s.trim();
+  if (s.includes('面议')) return { min: null, max: null };
+
+  // 统一单位：万 → 数字*10000，千 → 数字*1000
+  function toNum(v) {
+    v = v.trim();
+    let num = parseFloat(v);
+    if (v.includes('万')) num = num * 10000;
+    else if (v.includes('千')) num = num * 1000;
+    return Math.round(num);
+  }
+
+  // "1万-2万" / "8千-1.2万" / "4千-6千"
+  const parts = s.split('-');
+  if (parts.length === 2) {
+    return { min: toNum(parts[0]), max: toNum(parts[1]) };
+  }
+  // 单个值
+  return { min: toNum(s), max: null };
+}
+
+function cleanLocation(loc) {
+  // "两江新区-鸳鸯" → "两江新区", "九龙坡区-含谷" → "九龙坡区"
+  return loc ? loc.split('-')[0].trim() : '';
+}
+
+function formatPublishTime(t) {
+  // "13:44" / "今天" / "昨天" / "前天" / "本月" → 转为日期
+  if (!t) return null;
+  var now = new Date();
+  if (t.includes(':') && t.length <= 8) {
+    return now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + ' ' + t + ':00';
+  }
+  if (t === '今天') return now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + ' 00:00:00';
+  if (t === '昨天') { now.setDate(now.getDate()-1); return now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + ' 00:00:00'; }
+  if (t === '前天') { now.setDate(now.getDate()-2); return now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + ' 00:00:00'; }
+  if (t === '本月') { return now.getFullYear() + '-' + pad(now.getMonth()+1) + '-01 00:00:00'; }
+  // "本周" / "上月" / 其他无法处理的文字 → 返回 null
+  return null;
+}
+function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+/** 将岗位描述文本智能拆分为 description（岗位职责）和 requirements（招聘要求） */
+function splitDesc(text) {
+  if (!text) return { description: '', requirements: '' };
+  var markers = ['任职要求', '招聘要求', '职位要求', '任职资格', '岗位要求', '应聘条件'];
+  var idx = -1;
+  for (var m = 0; m < markers.length; m++) {
+    var pos = text.indexOf(markers[m]);
+    if (pos !== -1 && (idx === -1 || pos < idx)) idx = pos;
+  }
+  if (idx === -1) return { description: text.trim(), requirements: '' };
+  return { description: text.substring(0, idx).trim(), requirements: text.substring(idx).trim() };
+}
+
+/** 将 CSV 文本解析为二维数组（正确处理引号内换行） */
+function parseCsvRows(text) {
+  if (!text || !text.trim()) return [];
+  var rows = [], row = [], field = '', inQuotes = false;
+  for (var i = 0; i < text.length; i++) {
+    var ch = text[i];
+    if (ch === '"') {
+      if (inQuotes && i + 1 < text.length && text[i + 1] === '"') { field += '"'; i++; }
+      else { inQuotes = !inQuotes; }
+    } else if (ch === ',' && !inQuotes) { row.push(field.trim()); field = ''; }
+    else if ((ch === '\n' || ch === '\r') && !inQuotes) {
+      if (ch === '\r' && i + 1 < text.length && text[i + 1] === '\n') i++;
+      row.push(field.trim()); field = '';
+      if (row.length > 1 || (row.length === 1 && row[0] !== '')) rows.push(row);
+      row = [];
+    } else { field += ch; }
+  }
+  if (field.trim() || row.length > 0) { row.push(field.trim()); if (row.length > 0) rows.push(row); }
+  return rows;
+}
+
+/** 根据关键词自动猜列映射 */
+function autoGuessMapping(headers) {
+  var mapping = {};
+  var lowerHeaders = headers.map(function(h) { return (h || '').toLowerCase(); });
+  SYSTEM_FIELDS.forEach(function(sf) {
+    var bestIdx = -1, bestScore = 0;
+    lowerHeaders.forEach(function(lh, idx) {
+      var score = 0;
+      for (var k = 0; k < sf.keywords.length; k++) {
+        var kw = sf.keywords[k].toLowerCase();
+        if (lh === kw) { score = 100; break; }
+        if (lh.indexOf(kw) !== -1) score = Math.max(score, 50 - (lh.length - kw.length) * 0.5);
+      }
+      if (score > bestScore) { bestScore = score; bestIdx = idx; }
+    });
+    if (bestIdx !== -1) mapping[sf.key] = bestIdx;
+  });
+  return mapping;
+}
+
+/** 更新映射行的预览单元格 */
+function updatePreviewCell(sel, sampleRow) {
+  var field = sel.dataset.field;
+  var previewEl = document.getElementById('preview-' + field);
+  if (!previewEl) return;
+  var colName = sel.value;
+  if (!colName) { previewEl.textContent = '-'; return; }
+  var idx = csvHeaders.indexOf(colName);
+  if (idx !== -1 && sampleRow && sampleRow[idx] !== undefined) {
+    previewEl.textContent = (sampleRow[idx] || '').substring(0, 15) || '(空)';
+  } else { previewEl.textContent = '-'; }
+}
+
+/** 渲染列映射配置表格 */
+function renderColumnMapping(sampleRow) {
+  var tbody = document.getElementById('mappingBody');
+  tbody.innerHTML = '';
+  SYSTEM_FIELDS.forEach(function(sf) {
+    var tr = document.createElement('tr');
+    // 字段名
+    var tdLabel = document.createElement('td');
+    tdLabel.className = 'field-label';
+    tdLabel.textContent = sf.label;
+    if (sf.required) {
+      var star = document.createElement('span');
+      star.className = 'required'; star.textContent = ' *';
+      tdLabel.appendChild(star);
+    }
+    tr.appendChild(tdLabel);
+    // 下拉选择
+    var tdSelect = document.createElement('td');
+    var sel = document.createElement('select');
+    sel.dataset.field = sf.key;
+    var noneOpt = document.createElement('option');
+    noneOpt.value = ''; noneOpt.textContent = '(无)';
+    sel.appendChild(noneOpt);
+    csvHeaders.forEach(function(h) {
+      var opt = document.createElement('option');
+      opt.value = h; opt.textContent = h;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener('change', function() { updatePreviewCell(sel, sampleRow); });
+    tdSelect.appendChild(sel);
+    tr.appendChild(tdSelect);
+    // 预览
+    var tdPreview = document.createElement('td');
+    tdPreview.className = 'preview-cell';
+    tdPreview.id = 'preview-' + sf.key;
+    tdPreview.textContent = '-';
+    tr.appendChild(tdPreview);
+    tbody.appendChild(tr);
+  });
+  // 自动猜测并预选
+  var guessed = autoGuessMapping(csvHeaders);
+  SYSTEM_FIELDS.forEach(function(sf) {
+    var idx = guessed[sf.key];
+    if (idx !== undefined && csvHeaders[idx]) {
+      var sel = document.querySelector('#mappingBody select[data-field="' + sf.key + '"]');
+      if (sel) { sel.value = csvHeaders[idx]; updatePreviewCell(sel, sampleRow); }
+    }
+  });
+  document.getElementById('csvMapping').style.display = '';
+}
+
+/** 从 UI 收集列映射配置 */
+function getMappingFromUI() {
+  var mapping = {};
+  document.querySelectorAll('#mappingBody select').forEach(function(sel) {
+    var field = sel.dataset.field;
+    var colName = sel.value;
+    if (colName) {
+      var idx = csvHeaders.indexOf(colName);
+      if (idx !== -1) mapping[field] = idx;
+    }
+  });
+  return mapping;
+}
+
+/** 根据用户列映射解析 CSV（每个数据行=一条岗位） */
+function parseCsv(text, mapping) {
+  if (!text || !text.trim()) { parseErrors.push('CSV 文件为空'); return []; }
+  var rows = parseCsvRows(text);
+  if (rows.length < 2) { parseErrors.push('CSV 文件为空或只有标题行'); return []; }
+  var dataRows = rows.slice(1);
+  var jobs = [];
+
+  for (var i = 0; i < dataRows.length; i++) {
+    var cols = dataRows[i];
+    var title = mapping.title !== undefined ? (cols[mapping.title] || '') : '';
+    if (!title || !title.trim()) continue;
+
+    var salary = mapping.salary !== undefined ? (cols[mapping.salary] || '') : '';
+    var parsed = parseSalary(salary);
+    var descText = mapping.description !== undefined ? (cols[mapping.description] || '') : '';
+    var splitted = splitDesc(descText);
+
+    jobs.push({
+      title: title.trim(),
+      company: mapping.company !== undefined ? (cols[mapping.company] || '') : '',
+      salaryMin: parsed.min,
+      salaryMax: parsed.max,
+      location: mapping.location !== undefined ? cleanLocation(cols[mapping.location] || '') : '',
+      education: mapping.education !== undefined ? (cols[mapping.education] || '') : '',
+      experience: mapping.experience !== undefined ? (cols[mapping.experience] || '') : '',
+      publishTime: mapping.publishTime !== undefined ? formatPublishTime(cols[mapping.publishTime] || '') : null,
+      description: splitted.description,
+      requirements: splitted.requirements,
+      source: mapping.source !== undefined ? (cols[mapping.source] || 'CSV 导入') : 'CSV 导入',
+      sourceType: 1,
+      tags: null,
+      sourceUrl: mapping.sourceUrl !== undefined ? (cols[mapping.sourceUrl] || '') : ''
+    });
+  }
+
+  return jobs;
+}
+
+function getInputText() {
+  if (currentTab === 'json') return document.getElementById('jsonInput').value;
+  return document.getElementById('csvFileInput').dataset.content || '';
+}
+
+function previewData() {
+  parseErrors = [];
+  if (currentTab === 'json') {
+    const text = getInputText();
+    if (!text.trim()) { showStatus('请先输入 JSON 数据', 'error'); return; }
+    let data;
+    try { data = JSON.parse(text); } catch (e) { showStatus('JSON 解析失败：' + e.message, 'error'); return; }
+    if (!Array.isArray(data)) { showStatus('数据格式错误：需要 JSON 数组', 'error'); return; }
+    parsedJobs = [];
+    for (let i = 0; i < data.length; i++) {
+      if (!data[i].title) parseErrors.push('第 ' + (i + 1) + ' 条：缺少 title（职位名称）');
+      else {
+        // 自动拆分 description 中的岗位职责和招聘要求
+        var item = Object.assign({}, data[i]);
+        var splitted = splitDesc(item.description || '');
+        item.description = splitted.description;
+        if (!item.requirements) item.requirements = splitted.requirements;
+        parsedJobs.push(item);
+      }
+    }
+  } else {
+    const text = getInputText();
+    if (!text || !text.trim()) { showStatus('请先上传 CSV 文件', 'error'); return; }
+    var mapping = getMappingFromUI();
+    if (mapping.title === undefined) { showStatus('请先选择「职位名称」对应的 CSV 列', 'error'); return; }
+    parsedJobs = parseCsv(text, mapping);
+  }
+
+  if (parsedJobs.length === 0) { showStatus('没有有效数据可导入', 'error'); return; }
+
+  document.getElementById('previewInfo').innerHTML = '共解析出 <strong>' + parsedJobs.length + '</strong> 条岗位数据';
+  const tbody = document.getElementById('previewBody');
+  tbody.innerHTML = parsedJobs.map((j, i) =>
+    '<tr><td>' + (i+1) + '</td><td><strong>' + esc(j.title) + '</strong></td><td>' + esc(j.company||'-') + '</td><td>' + fmtSalary(j) + '</td><td>' + esc(j.location||'-') + '</td><td>' + esc(j.education||'-') + '</td><td>' + esc(j.experience||'-') + '</td>' +
+    '<td title="' + esc((j.description||'').substring(0,200)) + '">' + esc(truncate(j.description, 30)) + '</td>' +
+    '<td title="' + esc((j.requirements||'').substring(0,200)) + '">' + esc(truncate(j.requirements, 30)) + '</td>' +
+    '<td>' + esc(j.source||'手动') + '</td></tr>'
+  ).join('');
+
+  const errDiv = document.getElementById('previewErrors');
+  const errList = document.getElementById('previewErrorList');
+  if (parseErrors.length > 0) {
+    errDiv.style.display = ''; errList.innerHTML = parseErrors.map(e => '<div class="item">' + esc(e) + '</div>').join('');
+  } else { errDiv.style.display = 'none'; }
+
+  showStep(2);
+}
+
+// ====== Import ======
+async function doImport() {
+  if (parsedJobs.length === 0) return;
+  const btn = document.getElementById('importBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>导入中…';
+  try {
+    const response = await fetch(API_BASE + '/ai/jobs/import', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(parsedJobs)
+    });
+    const result = await response.json();
+    if (result.code === 200 || result.code === 0) showResult(result.data || { total: parsedJobs.length, success: parsedJobs.length, failed: 0, errors: [] });
+    else showResult({ total: parsedJobs.length, success: 0, failed: parsedJobs.length, errors: [result.msg || '请求失败'] });
+  } catch (e) {
+    showResult({ total: parsedJobs.length, success: 0, failed: parsedJobs.length, errors: ['网络错误：' + e.message] });
+  } finally { btn.disabled = false; btn.textContent = '确认导入'; }
+}
+
+function showResult(data) {
+  document.getElementById('rTotal').textContent = data.total || 0;
+  document.getElementById('rSuccess').textContent = data.success || 0;
+  document.getElementById('rFail').textContent = data.failed || 0;
+  const icon = document.getElementById('resultIcon');
+  if (data.failed === 0) { icon.className = 'result-icon ok'; icon.textContent = '✓'; }
+  else { icon.className = 'result-icon warn'; icon.textContent = '⚠'; }
+  const errDiv = document.getElementById('resultErrors');
+  if (data.errors && data.errors.length > 0) {
+    errDiv.style.display = '';
+    errDiv.innerHTML = '<div style="font-size:13px;font-weight:600;color:#C45C48;margin-bottom:4px;">错误详情：</div>' +
+      data.errors.map(e => '<div style="font-size:12px;color:#666;line-height:1.8;padding-left:8px;">' + esc(e) + '</div>').join('');
+  } else { errDiv.style.display = 'none'; }
+  showStep(3);
+}
+
+// ====== Step nav ======
+function showStep(n) {
+  document.getElementById('step1Content').style.display = n === 1 ? '' : 'none';
+  document.getElementById('step2Content').style.display = n === 2 ? '' : 'none';
+  document.getElementById('step3Content').style.display = n === 3 ? '' : 'none';
+  for (let i = 1; i <= 3; i++) {
+    const el = document.getElementById('step' + i);
+    el.className = 'step';
+    if (i === n) el.classList.add('active');
+    else if (i < n) el.classList.add('done');
+  }
+}
+function goStep1() { showStep(1); }
+function resetAll() { parsedJobs = []; parseErrors = []; document.getElementById('jsonInput').value = ''; clearCsvFile(); goStep1(); }
+
+// ====== Utils ======
+function showStatus(msg, type) {
+  const bar = document.getElementById('statusBar');
+  bar.style.display = 'flex'; bar.className = 'status-bar ' + (type || 'info');
+  document.getElementById('statusText').textContent = msg;
+  if (type === 'success') setTimeout(() => bar.style.display = 'none', 3000);
+}
+function fmtSalary(j) {
+  if (j.salaryMin != null && j.salaryMax != null) return '¥' + j.salaryMin + ' - ¥' + j.salaryMax;
+  if (j.salaryMin != null) return '¥' + j.salaryMin + '起';
+  return '-';
+}
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function truncate(s, n) { if (!s) return '-'; return s.length > n ? s.substring(0, n) + '…' : s; }
+
+// ====== 管理功能（全局切换） ======
+let currentGlobalTab = 'import';
+
+function switchGlobalTab(tab) {
+  currentGlobalTab = tab;
+  var tabs = document.querySelectorAll('.global-tab');
+  tabs.forEach(function(t) { t.classList.remove('active'); });
+  tabs[tab === 'import' ? 0 : 1].classList.add('active');
+  document.getElementById('importView').style.display = tab === 'import' ? '' : 'none';
+  document.getElementById('manageView').style.display = tab === 'manage' ? '' : 'none';
+  if (tab === 'manage') loadManageJobs();
+}
+
+// ====== 管理：加载岗位列表 ======
+let managePageNum = 1;
+let managePageSize = 15;
+let manageTotal = 0;
+let manageSearchTimer = null;
+
+function debounceManageSearch() {
+  clearTimeout(manageSearchTimer);
+  manageSearchTimer = setTimeout(() => { managePageNum = 1; loadManageJobs(); }, 300);
+}
+
+async function loadManageJobs() {
+  const tbody = document.getElementById('manageBody');
+  const q = document.getElementById('manageSearch').value.trim();
+  let url = API_BASE + '/ai/jobs/list?pageNum=' + managePageNum + '&pageSize=' + managePageSize;
+  if (q) url += '&title=' + encodeURIComponent(q);
+  try {
+    const resp = await fetch(url);
+    const result = await resp.json();
+    const rows = result.rows || [];
+    manageTotal = result.total || 0;
+    document.getElementById('manageTotal').textContent = manageTotal;
+
+    if (rows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:#888;">暂无数据</td></tr>';
+      document.getElementById('managePagination').innerHTML = '';
+      updateBatchDeleteButton();
+      return;
+    }
+    var ids = getSelectedIds();
+    tbody.innerHTML = rows.map(function(j) {
+      var sal = '-';
+      if (j.salaryMin != null && j.salaryMax != null) sal = j.salaryMin + '-' + j.salaryMax;
+      else if (j.salaryMin != null) sal = j.salaryMin + '起';
+      var time = j.publishTime ? j.publishTime.substring(0, 10) : '-';
+      var checked = ids.indexOf('' + j.id) !== -1 ? ' checked' : '';
+      return '<tr>' +
+        '<td class="manage-body-checkbox"><input type="checkbox" class="manage-row-cb" value="' + j.id + '" onchange="onRowCheckChange()"' + checked + ' /></td>' +
+        '<td><strong>' + esc(j.title) + '</strong></td>' +
+        '<td>' + esc(j.company || '-') + '</td>' +
+        '<td>' + sal + '</td>' +
+        '<td>' + esc(j.location || '-') + '</td>' +
+        '<td>' + esc(j.education || '-') + '</td>' +
+        '<td>' + time + '</td>' +
+        '<td>' +
+        '<button class="manage-btn manage-btn-edit" onclick="editJob(' + j.id + ')">编辑</button> ' +
+        '<button class="manage-btn manage-btn-del" onclick="deleteJob(' + j.id + ')">删除</button>' +
+        '</td></tr>';
+    }).join('');
+    renderManagePagination();
+    updateBatchDeleteButton();
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:#C45C48;">加载失败：' + esc(e.message) + '</td></tr>';
+    document.getElementById('managePagination').innerHTML = '';
+  }
+}
+
+function renderManagePagination() {
+  var el = document.getElementById('managePagination');
+  var totalPages = Math.ceil(manageTotal / managePageSize) || 1;
+  if (totalPages <= 1) { el.innerHTML = ''; return; }
+  var html = '';
+  html += '<button ' + (managePageNum <= 1 ? 'disabled' : 'onclick="managePageNum=' + (managePageNum - 1) + ';loadManageJobs()"') + '>&laquo;</button>';
+  var start = Math.max(1, managePageNum - 2);
+  var end = Math.min(totalPages, managePageNum + 2);
+  if (start > 1) { html += '<button onclick="managePageNum=1;loadManageJobs()">1</button>'; if (start > 2) html += '<button disabled>…</button>'; }
+  for (var i = start; i <= end; i++) {
+    html += '<button class="' + (i === managePageNum ? 'active' : '') + '" onclick="managePageNum=' + i + ';loadManageJobs()">' + i + '</button>';
+  }
+  if (end < totalPages) { if (end < totalPages - 1) html += '<button disabled>…</button>'; html += '<button onclick="managePageNum=' + totalPages + ';loadManageJobs()">' + totalPages + '</button>'; }
+  html += '<button ' + (managePageNum >= totalPages ? 'disabled' : 'onclick="managePageNum=' + (managePageNum + 1) + ';loadManageJobs()"') + '>&raquo;</button>';
+  el.innerHTML = html;
+}
+
+// ====== 管理：编辑岗位 ======
+async function editJob(id) {
+  try {
+    const resp = await fetch(API_BASE + '/ai/jobs/' + id);
+    const result = await resp.json();
+    if (result.code === 200 || result.code === 0) {
+      openEditModal(result.data);
+    } else {
+      showStatus('获取岗位详情失败', 'error');
+    }
+  } catch (e) {
+    showStatus('网络错误：' + e.message, 'error');
+  }
+}
+
+function openEditModal(job) {
+  document.getElementById('editId').value = job.id || '';
+  document.getElementById('editTitle').value = job.title || '';
+  document.getElementById('editCompany').value = job.company || '';
+  document.getElementById('editSalaryMin').value = job.salaryMin || '';
+  document.getElementById('editSalaryMax').value = job.salaryMax || '';
+  document.getElementById('editLocation').value = job.location || '';
+  document.getElementById('editEducation').value = job.education || '';
+  document.getElementById('editExperience').value = job.experience || '';
+  document.getElementById('editSourceType').value = job.sourceType != null ? job.sourceType : '1';
+  document.getElementById('editTags').value = typeof job.tags === 'string' ? job.tags : (Array.isArray(job.tags) ? JSON.stringify(job.tags) : '');
+  document.getElementById('editDescription').value = job.description || '';
+  document.getElementById('editRequirements').value = job.requirements || '';
+  document.getElementById('editSource').value = job.source || '';
+  document.getElementById('editSourceUrl').value = job.sourceUrl || '';
+  document.getElementById('editModal').style.display = 'flex';
+}
+
+function closeEditModal() {
+  document.getElementById('editModal').style.display = 'none';
+}
+
+// ====== 管理：保存编辑 ======
+async function saveEdit() {
+  var id = document.getElementById('editId').value;
+  if (!id) { showStatus('缺少岗位ID', 'error'); return; }
+  var title = document.getElementById('editTitle').value.trim();
+  if (!title) { showStatus('职位名称不能为空', 'error'); return; }
+  var salaryMin = document.getElementById('editSalaryMin').value;
+  var salaryMax = document.getElementById('editSalaryMax').value;
+  var tags = document.getElementById('editTags').value.trim();
+  if (tags && tags[0] !== '[') { showStatus('标签格式错误，应为 JSON 数组', 'error'); return; }
+
+  var data = {
+    title: title,
+    company: document.getElementById('editCompany').value.trim(),
+    salaryMin: salaryMin ? parseFloat(salaryMin) : null,
+    salaryMax: salaryMax ? parseFloat(salaryMax) : null,
+    location: document.getElementById('editLocation').value.trim(),
+    education: document.getElementById('editEducation').value,
+    experience: document.getElementById('editExperience').value.trim(),
+    sourceType: parseInt(document.getElementById('editSourceType').value),
+    tags: tags || null,
+    description: document.getElementById('editDescription').value.trim(),
+    requirements: document.getElementById('editRequirements').value.trim(),
+    source: document.getElementById('editSource').value.trim(),
+    sourceUrl: document.getElementById('editSourceUrl').value.trim()
+  };
+
+  var btn = document.getElementById('saveEditBtn');
+  btn.disabled = true; btn.textContent = '保存中…';
+  try {
+    const resp = await fetch(API_BASE + '/ai/jobs/' + id, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    const result = await resp.json();
+    if (result.code === 200 || result.code === 0) {
+      showStatus('保存成功', 'success');
+      closeEditModal();
+      loadManageJobs();
+    } else {
+      showStatus('保存失败：' + (result.msg || '未知错误'), 'error');
+    }
+  } catch (e) {
+    showStatus('网络错误：' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '保存修改';
+  }
+}
+
+// ====== 管理：删除岗位 ======
+async function deleteJob(id) {
+  if (!confirm('确定要删除这个岗位吗？此操作不可恢复。')) return;
+  try {
+    const resp = await fetch(API_BASE + '/ai/jobs/' + id, { method: 'DELETE' });
+    const result = await resp.json();
+    if (result.code === 200 || result.code === 0) {
+      showStatus('删除成功', 'success');
+      // 如果当前页删空了，回到上一页
+      var tbody = document.getElementById('manageBody');
+      if (tbody.children.length <= 1 && managePageNum > 1) managePageNum--;
+      loadManageJobs();
+    } else {
+      showStatus('删除失败：' + (result.msg || '未知错误'), 'error');
+    }
+  } catch (e) {
+    showStatus('网络错误：' + e.message, 'error');
+  }
+}
+
+// ====== 管理：批量删除 ======
+var manageSelectedIds = {};
+
+function getSelectedIds() {
+  var ids = [];
+  document.querySelectorAll('.manage-row-cb:checked').forEach(function(cb) { ids.push(cb.value); });
+  return ids;
+}
+
+function onRowCheckChange() {
+  syncCheckAllState();
+  updateBatchDeleteButton();
+}
+
+function toggleAllCheckboxes() {
+  var checked = document.getElementById('manageCheckAll').checked;
+  document.getElementById('manageCheckAllHead').checked = checked;
+  document.querySelectorAll('.manage-row-cb').forEach(function(cb) { cb.checked = checked; });
+  updateBatchDeleteButton();
+}
+
+function syncCheckAllState() {
+  var cbs = document.querySelectorAll('.manage-row-cb');
+  var allChecked = cbs.length > 0 && Array.from(cbs).every(function(cb) { return cb.checked; });
+  document.getElementById('manageCheckAll').checked = allChecked;
+  document.getElementById('manageCheckAllHead').checked = allChecked;
+}
+
+function updateBatchDeleteButton() {
+  var ids = getSelectedIds();
+  var count = ids.length;
+  document.getElementById('manageSelectedCount').textContent = '已选 ' + count + ' 项';
+  document.getElementById('batchDelBtn').disabled = count === 0;
+}
+
+async function batchDelete() {
+  var ids = getSelectedIds();
+  if (ids.length === 0) return;
+  if (!confirm('确定要删除选中的 ' + ids.length + ' 个岗位吗？此操作不可恢复。')) return;
+  var btn = document.getElementById('batchDelBtn');
+  btn.disabled = true; btn.textContent = '删除中…';
+  var success = 0, failed = 0;
+  for (var i = 0; i < ids.length; i++) {
+    try {
+      var resp = await fetch(API_BASE + '/ai/jobs/' + ids[i], { method: 'DELETE' });
+      var result = await resp.json();
+      if (result.code === 200 || result.code === 0) success++;
+      else failed++;
+    } catch (e) {
+      failed++;
+    }
+  }
+  btn.textContent = '批量删除';
+  showStatus('删除完成：成功 ' + success + ' 项' + (failed > 0 ? '，失败 ' + failed + ' 项' : ''), failed > 0 ? 'error' : 'success');
+  // 重置全选状态
+  document.getElementById('manageCheckAll').checked = false;
+  document.getElementById('manageCheckAllHead').checked = false;
+  // 如果当前页删空了，回到上一页
+  if (document.querySelectorAll('.manage-row-cb').length <= ids.length && managePageNum > 1) managePageNum--;
+  loadManageJobs();
+}
+</script>
+</body>
+</html>

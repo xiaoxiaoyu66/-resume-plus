@@ -1,0 +1,120 @@
+# Windows 开发环境配置
+# 连接 Kali 虚拟机中的 Docker 中间件
+# Kali IP: 192.168.132.136
+
+# 服务器配置
+server:
+  port: 8080
+
+# Spring 配置
+spring:
+  application:
+    name: ruoyi-admin
+  
+  # 数据源配置 - Kali MySQL
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driverClassName: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://192.168.132.136:3306/ruoyi_ai?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
+    username: root
+    password: ${WINDOWS_MYSQL_PASSWORD}
+    druid:
+      initialSize: 5
+      minIdle: 10
+      maxActive: 20
+      maxWait: 60000
+      connectTimeout: 30000
+      socketTimeout: 60000
+  
+  # Redis 配置 - Kali Redis
+  redis:
+    host: 192.168.132.136
+    port: 6379
+    password: 
+    database: 0
+    timeout: 10s
+    lettuce:
+      pool:
+        min-idle: 0
+        max-idle: 8
+        max-active: 8
+        max-wait: -1ms
+  
+  # MinIO 配置 - Kali MinIO
+  minio:
+    endpoint: http://192.168.132.136:9000
+    accessKey: admin
+    secretKey: ${WINDOWS_MINIO_SECRET_KEY}
+    bucketName: resume-plus
+  
+  # Elasticsearch 配置 - Kali ES（部署后使用）
+  elasticsearch:
+    uris: http://192.168.132.136:9200
+    connection-timeout: 5s
+    socket-timeout: 30s
+  
+  # RabbitMQ 配置 - Kali RabbitMQ（部署后使用）
+  rabbitmq:
+    host: 192.168.132.136
+    port: 5672
+    username: admin
+    password: ${WINDOWS_RABBITMQ_PASSWORD}
+    virtual-host: /
+    connection-timeout: 5s
+
+  # Servlet 配置
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+# MyBatis 配置
+mybatis:
+  mapperLocations: classpath*:mapper/**/*Mapper.xml
+  typeAliasesPackage: com.ruoyi.**.domain
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: true
+
+# 日志配置
+logging:
+  level:
+    com.ruoyi: debug
+    org.springframework: warn
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n"
+
+# 用户配置
+user:
+  password:
+    maxRetryCount: 5
+    lockTime: 10
+
+# Token 配置
+token:
+  header: Authorization
+  secret: ${WINDOWS_JWT_SECRET}
+  expireTime: 30
+
+# 验证码配置
+captcha:
+  enabled: false
+  type: math
+
+# 文件上传配置
+file:
+  upload:
+    path: D:/JavaAI/AI-WEB/upload
+    maxSize: 100
+
+# AI 配置
+deepseek:
+  api:
+    key: ${DEEPSEEK_API_KEY}
+    url: https://api.deepseek.com/v1/chat/completions
+    model: deepseek-chat
+    timeout: 60000
+
+# PDF 生成 — Gotenberg（Docker 内用 gotenberg:3000，本地测试用 localhost:3000）
+gotenberg:
+  url: http://192.168.132.136:3000

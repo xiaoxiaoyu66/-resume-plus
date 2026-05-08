@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.web.controller.ai.mapper.LoginLogMapper">
+
+    <resultMap type="com.ruoyi.web.controller.ai.domain.LoginLog" id="LoginLogResult">
+        <id property="logId" column="log_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="loginType" column="login_type"/>
+        <result property="ipAddress" column="ip_address"/>
+        <result property="loginLocation" column="login_location"/>
+        <result property="browser" column="browser"/>
+        <result property="os" column="os"/>
+        <result property="loginStatus" column="login_status"/>
+        <result property="msg" column="msg"/>
+        <result property="loginTime" column="login_time"/>
+    </resultMap>
+
+    <sql id="selectLoginLogVo">
+        select log_id, user_id, user_name, login_type, ip_address, login_location, browser, os, login_status, msg, login_time
+        from sys_login_log
+    </sql>
+
+    <select id="selectLoginLogByLogId" parameterType="Long" resultMap="LoginLogResult">
+        <include refid="selectLoginLogVo"/>
+        where log_id = #{logId}
+    </select>
+
+    <select id="selectLoginLogList" parameterType="com.ruoyi.web.controller.ai.domain.LoginLog" resultMap="LoginLogResult">
+        <include refid="selectLoginLogVo"/>
+        <where>
+            <if test="userName != null and userName != ''">
+                AND user_name like concat('%', #{userName}, '%')
+            </if>
+            <if test="loginType != null and loginType != ''">
+                AND login_type = #{loginType}
+            </if>
+            <if test="ipAddress != null and ipAddress != ''">
+                AND ip_address = #{ipAddress}
+            </if>
+            <if test="loginStatus != null and loginStatus != ''">
+                AND login_status = #{loginStatus}
+            </if>
+            <if test="params.beginTime != null and params.beginTime != ''">
+                AND date_format(login_time,'%y%m%d') &gt;= date_format(#{params.beginTime},'%y%m%d')
+            </if>
+            <if test="params.endTime != null and params.endTime != ''">
+                AND date_format(login_time,'%y%m%d') &lt;= date_format(#{params.endTime},'%y%m%d')
+            </if>
+        </where>
+        order by login_time desc
+    </select>
+
+    <insert id="insertLoginLog" parameterType="com.ruoyi.web.controller.ai.domain.LoginLog" useGeneratedKeys="true" keyProperty="logId">
+        insert into sys_login_log
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="userName != null and userName != ''">user_name,</if>
+            <if test="loginType != null and loginType != ''">login_type,</if>
+            <if test="ipAddress != null and ipAddress != ''">ip_address,</if>
+            <if test="loginLocation != null and loginLocation != ''">login_location,</if>
+            <if test="browser != null and browser != ''">browser,</if>
+            <if test="os != null and os != ''">os,</if>
+            <if test="loginStatus != null and loginStatus != ''">login_status,</if>
+            <if test="msg != null and msg != ''">msg,</if>
+            login_time,
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="userName != null and userName != ''">#{userName},</if>
+            <if test="loginType != null and loginType != ''">#{loginType},</if>
+            <if test="ipAddress != null and ipAddress != ''">#{ipAddress},</if>
+            <if test="loginLocation != null and loginLocation != ''">#{loginLocation},</if>
+            <if test="browser != null and browser != ''">#{browser},</if>
+            <if test="os != null and os != ''">#{os},</if>
+            <if test="loginStatus != null and loginStatus != ''">#{loginStatus},</if>
+            <if test="msg != null and msg != ''">#{msg},</if>
+            sysdate(),
+        </trim>
+    </insert>
+
+    <delete id="deleteLoginLogByLogIds">
+        delete from sys_login_log where log_id in
+        <foreach collection="array" item="logId" open="(" separator="," close=")">
+            #{logId}
+        </foreach>
+    </delete>
+
+    <delete id="cleanLoginLog">
+        truncate table sys_login_log
+    </delete>
+
+    <select id="selectLoginLogByUserId" resultMap="LoginLogResult">
+        <include refid="selectLoginLogVo"/>
+        where user_id = #{userId}
+        order by login_time desc
+    </select>
+
+</mapper>

@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.ruoyi.web.controller.ai.mapper.ChatMessageMapper">
+
+    <resultMap id="AIChatMessageResult" type="com.ruoyi.web.controller.ai.domain.ChatMessage">
+        <id property="id" column="id"/>
+        <result property="sessionId" column="session_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="role" column="role"/>
+        <result property="content" column="content"/>
+        <result property="contentShort" column="content_short"/>
+        <result property="tokensUsed" column="tokens_used"/>
+        <result property="latencyMs" column="latency_ms"/>
+        <result property="isSaved" column="is_saved"/>
+        <result property="deleted" column="deleted"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <sql id="selectMessageVo">
+        SELECT id, session_id, user_id, role, content, content_short, tokens_used, latency_ms, is_saved, deleted, create_time
+        FROM chat_message
+    </sql>
+
+    <select id="selectMessageById" parameterType="Long" resultMap="AIChatMessageResult">
+        <include refid="selectMessageVo"/>
+        WHERE id = #{id} AND deleted = 0
+    </select>
+
+    <select id="selectMessageListBySessionId" parameterType="Long" resultMap="AIChatMessageResult">
+        <include refid="selectMessageVo"/>
+        WHERE session_id = #{sessionId} AND deleted = 0
+        ORDER BY id ASC
+    </select>
+
+    <insert id="insertMessage" parameterType="com.ruoyi.web.controller.ai.domain.ChatMessage" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO chat_message
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="sessionId != null">session_id,</if>
+            <if test="userId != null">user_id,</if>
+            <if test="role != null">role,</if>
+            <if test="content != null and content != ''">content,</if>
+            <if test="contentShort != null and contentShort != ''">content_short,</if>
+            <if test="tokensUsed != null">tokens_used,</if>
+            <if test="latencyMs != null">latency_ms,</if>
+            <if test="isSaved != null">is_saved,</if>
+            <if test="deleted != null">deleted,</if>
+            create_time
+        </trim>
+        <trim prefix="VALUES (" suffix=")" suffixOverrides=",">
+            <if test="sessionId != null">#{sessionId},</if>
+            <if test="userId != null">#{userId},</if>
+            <if test="role != null">#{role},</if>
+            <if test="content != null and content != ''">#{content},</if>
+            <if test="contentShort != null and contentShort != ''">#{contentShort},</if>
+            <if test="tokensUsed != null">#{tokensUsed},</if>
+            <if test="latencyMs != null">#{latencyMs},</if>
+            <if test="isSaved != null">#{isSaved},</if>
+            <if test="deleted != null">#{deleted},</if>
+            now()
+        </trim>
+    </insert>
+
+    <update id="deleteMessageBySessionId" parameterType="Long">
+        UPDATE chat_message SET deleted = 1 WHERE session_id = #{sessionId}
+    </update>
+
+    <select id="getLastMessageBySessionId" parameterType="Long" resultMap="AIChatMessageResult">
+        SELECT <include refid="selectMessageVo"/>
+        WHERE session_id = #{sessionId} AND deleted = 0 AND role = 2
+        ORDER BY id DESC LIMIT 1
+    </select>
+
+</mapper>

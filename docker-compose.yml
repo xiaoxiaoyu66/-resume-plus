@@ -1,0 +1,71 @@
+# ========================================
+# Resume+ AI 助手 — Docker Compose (生产部署)
+# 一键启动: docker compose up -d
+# 查看日志: docker compose logs -f
+# 停止:     docker compose down
+# ========================================
+services:
+
+  # ==========================================
+  # 后端 API — Spring Boot 3 + Java 17
+  # http://localhost:8080
+  # ==========================================
+  ruoyi-admin:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: resume-plus-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - TZ=Asia/Shanghai
+      - JAVA_OPTS=-Xms512m -Xmx1024m
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/ai/jobs/list"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - resume-plus-network
+
+  # ==========================================
+  # 前端 — Nginx (Vue 构建产物)
+  # http://localhost:3000
+  # ==========================================
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: resume-plus-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      ruoyi-admin:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - resume-plus-network
+
+  # ==========================================
+  # PDF 生成 — Gotenberg (Chromium headless)
+  # http://gotenberg:3000
+  # ==========================================
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    container_name: resume-plus-gotenberg
+    ports:
+      - "3000:3000"
+    command:
+      - "gotenberg"
+      - "--chromium-disable-javascript=true"
+      - "--chromium-allow-list=^file:///.*$|^http://localhost:.*$"
+    restart: unless-stopped
+    networks:
+      - resume-plus-network
+
+networks:
+  resume-plus-network:
+    name: resume-plus-network
+    driver: bridge

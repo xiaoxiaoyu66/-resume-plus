@@ -1,0 +1,248 @@
+# DeepSeek AI配置
+deepseek:
+  # API密钥
+  api-key: ${DEEPSEEK_API_KEY}
+  api-url: https://api.deepseek.com/chat/completions
+  model: deepseek-chat
+  # System Prompt 配置
+  system-prompt:
+    # 默认场景 — 综合求职助手
+    default: "你是 Resume+ 智能求职助手，运行在「江城聘」重庆综合招聘平台。你拥有以下核心能力：\n1. 简历分析与管理 — 解析PDF/Word简历，提取结构化信息，评分诊断，润色优化\n2. 岗位匹配 — 基于用户技能画像进行AI匹配度分析，推荐重庆本地优质岗位\n3. 面试辅导 — 模拟技术面试和HR面试，提供应答技巧和面试准备建议\n4. 职业规划 — 分析各行业就业趋势（尤其重庆地区），提供实习、校招、社招差异化建议\n5. 文件分析 — 支持上传简历和项目文档，结合向量检索进行智能问答\n\n回复风格：专业但不刻板，简洁且有洞见。优先使用中文回答，保留必要的英文技术术语。你是Recume+助手本身，不要提及自己是AI模型或语言模型。回答中不要提及自己是AI模型或语言模型。如果用户未明确目标岗位或行业，先主动询问具体方向，再展开分析或推荐。"
+    # 简历分析场景
+    resume: "你是简历优化专家，擅长分析中文简历。从HR和面试官双重视角审视简历，关注以下维度：\n1. 结构排版 — 信息层次是否清晰，重点是否突出\n2. 内容描述 — 技能和职责是否明确，项目成果是否量化\n3. 成果导向 — 是否体现「做了什么+怎么做的+取得什么结果」\n4. 岗位匹配度 — 简历内容与目标岗位的关联程度\n\n对于不足给出具体修改建议（如「第二条项目经验建议补充技术难点和解决方案」），而非笼统评价。如果用户未说明目标岗位/行业，先询问其意向方向，再针对性给出修改建议。"
+    # 面试辅导场景
+    interview: "你是面试辅导专家，熟悉技术面试和HR面试全流程，覆盖技术类和非技术类岗位。根据用户的目标岗位和行业方向，提供：\n1. 针对性面试题预测（包括基础、项目深挖、场景设计）\n2. 回答思路和STAR话术指导\n3. 常见踩坑点和应对策略\n4. 反问环节建议\n\n模拟面试时，先出题等用户回答后再给出点评和示范答案，不要一次性给出全部答案。如果用户未指定目标岗位，先确认岗位方向再开始模拟。"
+    # 职业规划场景
+    career: "你是职业规划顾问，熟悉重庆地区各行业的就业趋势和人才需求格局。根据用户的教育背景（学校、专业、学历、毕业年份）、技能情况和目标方向，提供：\n1. 短期（0-1年）：实习/校招策略，技能补强建议\n2. 中期（1-3年）：跳槽时机，方向选择\n3. 长期（3-5年）：管理线/专业线路径分析\n\n建议结合重庆本地企业格局给出差异化建议，避免泛泛而谈。先了解用户的目标行业和岗位方向，再结合其背景给出规划建议。"
+
+# MinIO 对象存储配置（Kali Docker 环境）
+minio:
+  # MinIO 服务地址
+  endpoint: http://192.168.132.136:9000
+  # 访问密钥
+  access-key: ${MINIO_ACCESS_KEY}
+  secret-key: ${MINIO_SECRET_KEY}
+  # 默认存储桶名称（已存在的 ai-webchat）
+  bucket-name: ai-webchat
+  # 文件访问URL过期时间（秒），默认1小时
+  expiry: 3600
+
+# PGVector 向量数据库配置
+pgvector:
+  # PostgreSQL 地址
+  host: 192.168.132.136
+  # 端口
+  port: 5433
+  # 数据库名
+  database: ruoyi_vector
+  # 用户名
+  username: ruoyi
+  password: ${PGVECTOR_PASSWORD}
+  # 连接池配置
+  max-connections: 10
+
+# PDF 生成 — Gotenberg（Docker 内用 gotenberg:3000，本地开发用 Kali VM 地址）
+gotenberg:
+  url: http://192.168.132.136:3000
+
+# Embedding 服务配置 (使用 SiliconFlow API)
+embedding:
+  # API地址
+  api-url: https://api.siliconflow.cn/v1/embeddings
+  # API密钥
+  api-key: ${EMBEDDING_API_KEY}
+  # 模型名称
+  model: BAAI/bge-m3
+  # 向量维度
+  dimension: 768
+
+# SiliconFlow Chat 配置 — DeepSeek 兜底
+# 使用 Qwen2.5-7B 免费模型，复用相同的 API Key
+siliconflow:
+  chat:
+    api-url: https://api.siliconflow.cn/v1/chat/completions
+    api-key: ${EMBEDDING_API_KEY}
+    model: Qwen/Qwen2.5-7B-Instruct
+
+# 阿里云短信认证服务配置
+aliyun:
+  sms:
+    access-key-id: ${ALIYUN_SMS_ACCESS_KEY_ID}
+    access-key-secret: ${ALIYUN_SMS_SECRET}
+    sign-name: "速通互联验证码"           # 短信认证服务默认签名
+    template-code: "100001"               # 短信认证服务默认模板CODE
+    region-id: cn-hangzhou
+
+# 微信登录配置
+wx:
+  app-secret: ${WX_APP_SECRET}
+
+# 项目相关配置
+ruoyi:
+  # 名称
+  name: RuoYi
+  # 版本
+  version: 3.9.2
+  # 版权年份
+  copyrightYear: 2026
+  # 文件路径 示例（ Windows配置D:/ruoyi/uploadPath，Linux配置 /home/ruoyi/uploadPath）
+  profile: D:/ruoyi/uploadPath
+  # 获取ip地址开关
+  addressEnabled: false
+  # 验证码类型 math 数字计算 char 字符验证
+  captchaType: math
+
+# 开发环境配置
+server:
+  # 服务器的HTTP端口，默认为8080
+  port: 8080
+  servlet:
+    # 应用的访问路径
+    context-path: /
+  tomcat:
+    # tomcat的URI编码
+    uri-encoding: UTF-8
+    # 连接数满后的排队数，默认为100
+    accept-count: 1000
+    threads:
+      # tomcat最大线程数（轻量服务器压到100，省700MB内存）
+      max: 100
+      # Tomcat启动初始化的线程数
+      min-spare: 20
+
+# 日志配置
+logging:
+  level:
+    com.ruoyi: debug
+    org.springframework: warn
+
+# 用户配置
+user:
+  password:
+    # 密码最大错误次数
+    maxRetryCount: 5
+    # 密码锁定时间（默认10分钟）
+    lockTime: 10
+
+# Spring配置
+spring:
+  # 资源信息
+  messages:
+    # 国际化资源文件路径
+    basename: i18n/messages
+  profiles:
+    active: druid
+  # 文件上传
+  servlet:
+    multipart:
+      # 单个文件大小
+      max-file-size: 10MB
+      # 设置总上传的文件大小
+      max-request-size: 20MB
+  jackson:
+    time-zone: GMT+8
+    date-format: yyyy-MM-dd HH:mm:ss
+  # 服务模块
+  devtools:
+    restart:
+      # 热部署开关
+      enabled: true
+  data:
+    # redis 配置
+    redis:
+      # 地址
+      host: localhost
+      # 端口，默认为6379
+      port: 6379
+      # 数据库索引
+      database: 0
+      # 密码
+      password:
+      # 连接超时时间
+      timeout: 10s
+      lettuce:
+        pool:
+          # 连接池中的最小空闲连接
+          min-idle: 0
+          # 连接池中的最大空闲连接
+          max-idle: 8
+          # 连接池的最大数据库连接数
+          max-active: 8
+          # #连接池最大阻塞等待时间（使用负值表示没有限制）
+          max-wait: -1ms
+
+# token配置
+token:
+  # 令牌自定义标识
+  header: Authorization
+  # 令牌密钥
+  secret: ${JWT_SECRET}
+  # 令牌有效期（默认30分钟）
+  expireTime: 30
+
+# MyBatis配置
+mybatis:
+  # 搜索指定包别名
+  typeAliasesPackage: com.ruoyi.**.domain
+  # 配置mapper的扫描，找到所有的mapper.xml映射文件
+  mapperLocations: classpath*:mapper/**/*Mapper.xml
+  # 加载全局的配置文件
+  configLocation: classpath:mybatis/mybatis-config.xml
+
+# PageHelper分页插件
+pagehelper:
+  helperDialect: mysql
+  supportMethodsArguments: true
+  params: count=countSql
+
+# Springdoc配置
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    tags-sorter: alpha
+  group-configs:
+    - group: 'default'
+      display-name: '测试模块'
+      paths-to-match: '/**'
+      packages-to-scan: com.ruoyi.web.controller.tool
+
+# 防盗链配置
+referer:
+  # 防盗链开关
+  enabled: false
+  # 允许的域名列表
+  allowed-domains: localhost,127.0.0.1,ruoyi.vip,www.ruoyi.vip
+
+# 防止XSS攻击
+xss:
+  # 过滤开关
+  enabled: true
+  # 排除链接（多个用逗号分隔）
+  excludes: /system/notice
+  # 匹配链接
+  urlPatterns: /system/*,/monitor/*,/tool/*
+
+# AI 对话优化配置
+ai:
+  # 滑动窗口记忆配置
+  window:
+    # 最大保留对话轮数（每轮包含用户+AI两条消息）
+    max-rounds: 5
+    # 最大Token数（系统提示词+上下文）
+    max-tokens: 3000
+    # 系统提示词优先保留
+    system-priority: true
+  
+  # 高频缓存配置
+  cache:
+    # L1 本地缓存大小
+    l1-size: 1000
+    # L1 缓存过期时间（分钟）
+    l1-ttl: 10
+    # L2 Redis缓存过期时间（分钟）
+    l2-ttl: 60
+    # 语义相似度阈值
+    similarity-threshold: 0.85

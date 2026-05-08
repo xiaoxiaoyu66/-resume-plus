@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.ruoyi.web.controller.ai.mapper.JobPostingMapper">
+
+    <resultMap id="JobPostingResult" type="com.ruoyi.web.controller.ai.domain.JobPosting">
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="company" column="company"/>
+        <result property="salaryMin" column="salary_min"/>
+        <result property="salaryMax" column="salary_max"/>
+        <result property="location" column="location"/>
+        <result property="education" column="education"/>
+        <result property="experience" column="experience"/>
+        <result property="tags" column="tags"/>
+        <result property="description" column="description"/>
+        <result property="requirements" column="requirements"/>
+        <result property="source" column="source"/>
+        <result property="sourceType" column="source_type"/>
+        <result property="sourceUrl" column="source_url"/>
+        <result property="publishTime" column="publish_time"/>
+        <result property="deleted" column="deleted"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <sql id="selectJobVo">
+        SELECT id, title, company, salary_min, salary_max, location, education, experience,
+               tags, description, requirements, source, source_type, source_url,
+               publish_time, deleted, create_time, update_time
+        FROM job_postings
+    </sql>
+
+    <select id="selectJobList" parameterType="com.ruoyi.web.controller.ai.domain.JobPosting" resultMap="JobPostingResult">
+        <include refid="selectJobVo"/>
+        WHERE deleted = 0
+        <if test="title != null and title != ''">
+            AND (title LIKE CONCAT('%', #{title}, '%') OR company LIKE CONCAT('%', #{title}, '%'))
+        </if>
+        <if test="location != null and location != ''">
+            AND location = #{location}
+        </if>
+        <if test="education != null and education != ''">
+            AND education = #{education}
+        </if>
+        <if test="sourceType != null">
+            AND source_type = #{sourceType}
+        </if>
+        ORDER BY publish_time DESC
+    </select>
+
+    <select id="selectJobById" parameterType="Long" resultMap="JobPostingResult">
+        <include refid="selectJobVo"/>
+        WHERE id = #{id} AND deleted = 0
+    </select>
+
+    <insert id="insertJob" parameterType="com.ruoyi.web.controller.ai.domain.JobPosting" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO job_postings
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            title,
+            <if test="company != null and company != ''">company,</if>
+            <if test="salaryMin != null">salary_min,</if>
+            <if test="salaryMax != null">salary_max,</if>
+            <if test="location != null and location != ''">location,</if>
+            <if test="education != null">education,</if>
+            <if test="experience != null">experience,</if>
+            <if test="tags != null">tags,</if>
+            <if test="description != null">description,</if>
+            <if test="requirements != null">requirements,</if>
+            <if test="source != null">source,</if>
+            <if test="sourceType != null">source_type,</if>
+            <if test="sourceUrl != null">source_url,</if>
+            <if test="publishTime != null">publish_time,</if>
+            deleted, create_time, update_time
+        </trim>
+        <trim prefix="VALUES (" suffix=")" suffixOverrides=",">
+            #{title},
+            <if test="company != null and company != ''">#{company},</if>
+            <if test="salaryMin != null">#{salaryMin},</if>
+            <if test="salaryMax != null">#{salaryMax},</if>
+            <if test="location != null and location != ''">#{location},</if>
+            <if test="education != null">#{education},</if>
+            <if test="experience != null">#{experience},</if>
+            <if test="tags != null">#{tags},</if>
+            <if test="description != null">#{description},</if>
+            <if test="requirements != null">#{requirements},</if>
+            <if test="source != null">#{source},</if>
+            <if test="sourceType != null">#{sourceType},</if>
+            <if test="sourceUrl != null">#{sourceUrl},</if>
+            <if test="publishTime != null">#{publishTime},</if>
+            0, now(), now()
+        </trim>
+    </insert>
+
+    <insert id="insertJobBatch" parameterType="java.util.List">
+        INSERT INTO job_postings (title, company, salary_min, salary_max, location, education,
+                                  experience, tags, description, requirements, source, source_type,
+                                  source_url, publish_time, deleted, create_time, update_time)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.title}, #{item.company}, #{item.salaryMin}, #{item.salaryMax},
+             #{item.location}, #{item.education}, #{item.experience}, #{item.tags},
+             #{item.description}, #{item.requirements}, #{item.source}, #{item.sourceType},
+             #{item.sourceUrl}, #{item.publishTime}, 0, now(), now())
+        </foreach>
+    </insert>
+
+    <update id="updateJob" parameterType="com.ruoyi.web.controller.ai.domain.JobPosting">
+        UPDATE job_postings
+        <set>
+            <if test="title != null and title != ''">title = #{title},</if>
+            <if test="company != null">company = #{company},</if>
+            <if test="salaryMin != null">salary_min = #{salaryMin},</if>
+            <if test="salaryMax != null">salary_max = #{salaryMax},</if>
+            <if test="location != null">location = #{location},</if>
+            <if test="education != null">education = #{education},</if>
+            <if test="experience != null">experience = #{experience},</if>
+            <if test="tags != null">tags = #{tags},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="requirements != null">requirements = #{requirements},</if>
+            <if test="source != null">source = #{source},</if>
+            <if test="sourceType != null">source_type = #{sourceType},</if>
+            <if test="sourceUrl != null">source_url = #{sourceUrl},</if>
+            <if test="publishTime != null">publish_time = #{publishTime},</if>
+            update_time = now()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <update id="deleteJobById" parameterType="Long">
+        UPDATE job_postings SET deleted = 1, update_time = now() WHERE id = #{id}
+    </update>
+
+</mapper>
