@@ -1,5 +1,59 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="5" fill="#C45C48"/>
-  <rect x="2" y="2" width="28" height="28" rx="3.5" fill="none" stroke="#FAF8F5" stroke-width="1.2" opacity="0.6"/>
-  <text x="16" y="23" font-family="'Noto Serif SC', 'STSong', 'SimSun', serif" font-size="18" font-weight="700" fill="#FAF8F5" text-anchor="middle">历</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2D1B13"/>
+      <stop offset="100%" stop-color="#1A0F0A"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#D4A574"/>
+      <stop offset="100%" stop-color="#B8834D"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="1.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- 背景 — 圆形墨砚 -->
+  <circle cx="60" cy="60" r="58" fill="url(#bg)"/>
+  <circle cx="60" cy="60" r="58" fill="none" stroke="url(#accent)" stroke-width="1.5" opacity="0.4"/>
+
+  <!-- 内圈装饰 — 水墨渲染 -->
+  <circle cx="60" cy="60" r="45" fill="none" stroke="#D4A574" stroke-width="0.5" opacity="0.2"/>
+
+  <!-- 毛笔笔触 "/" — 斜向上，象征上升 -->
+  <path d="M38 85 Q45 75, 52 68 Q58 62, 62 56 Q68 48, 72 42 Q76 36, 82 32"
+        fill="none" stroke="url(#accent)" stroke-width="4" stroke-linecap="round"
+        stroke-dasharray="80" stroke-dashoffset="80" opacity="0.7">
+    <animate attributeName="stroke-dashoffset" from="80" to="0" dur="1.5s" fill="freeze"/>
+  </path>
+
+  <!-- R字符 — 主体 -->
+  <g filter="url(#glow)">
+    <text x="54" y="72" font-family="'Georgia', 'Times New Roman', serif" font-size="52"
+          font-weight="700" fill="url(#accent)" text-anchor="middle" letter-spacing="-2"
+          opacity="0">
+      R
+      <animate attributeName="opacity" from="0" to="1" dur="0.8s" begin="0.5s" fill="freeze"/>
+    </text>
+  </g>
+
+  <!-- + 号 — 小号金色 -->
+  <text x="89" y="48" font-family="'Georgia', serif" font-size="22" font-weight="300"
+        fill="#D4A574" text-anchor="middle" opacity="0">
+    +
+    <animate attributeName="opacity" from="0" to="0.8" dur="0.6s" begin="1s" fill="freeze"/>
+  </text>
+
+  <!-- 底部小字 resume -->
+  <text x="60" y="98" font-family="'Georgia', serif" font-size="9" font-weight="400"
+        fill="#D4A574" text-anchor="middle" letter-spacing="3" opacity="0">
+    RESUME
+    <animate attributeName="opacity" from="0" to="0.6" dur="0.8s" begin="1.3s" fill="freeze"/>
+  </text>
+
+  <!-- 笔触点缀 — 左下方小墨点 -->
+  <circle cx="35" cy="90" r="2" fill="#D4A574" opacity="0.3"/>
+  <circle cx="33" cy="86" r="1.2" fill="#D4A574" opacity="0.2"/>
+  <circle cx="88" cy="82" r="1.5" fill="#D4A574" opacity="0.15"/>
 </svg>
