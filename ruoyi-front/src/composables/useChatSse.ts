@@ -167,9 +167,7 @@ export function useChatSse(options) {
         }
       }, 10000)
 
-      const userId = JSON.parse(localStorage.getItem('userInfo'))?.userId || 1
       await sseClient.value.streamChat({
-        userId: userId,
         sessionId: currentSessionId.value,
         message: sendContent,
         fileNames: fileNames.length > 0 ? fileNames : undefined,

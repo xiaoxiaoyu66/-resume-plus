@@ -9,10 +9,14 @@
 set -e
 
 # ---- 配置（改成你自己的）----
-DOMAIN="localhost"           # 你的域名或服务器 IP
-MYSQL_PASSWORD="resume_plus_pass"  # 改掉！
-JWT_SECRET="resume_plus_jwt_secret_change_me"
-DEEPSEEK_API_KEY="sk-your-key-here"
+DOMAIN="47.109.155.160"      # 你的域名或服务器 IP
+MYSQL_PASSWORD="wiEfOvdL9FOvZSA"   # 改掉！
+JWT_SECRET="vwYyBRUDjPlV3OvRDzVPUJjbUe1wf9NnrJRGIpw"
+DEEPSEEK_API_KEY="sk-ecff601286064908b468eaca79fc438b"
+
+# 阿里云短信服务（用于手机验证码登录）
+ALIYUN_SMS_ACCESS_KEY_ID="LTAI5t99MX8okh5JEQKFwp6u"
+ALIYUN_SMS_SECRET="uJ3yc0q2TXIIdmpZunG4jdexiYiaiP"
 
 # ---- 颜色 ----
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
@@ -105,7 +109,7 @@ services:
     restart: unless-stopped
 
   gotenberg:
-    image: gotenberg/gotenberg:8
+    image: gotenberg/gotenberg:8.14
     container_name: resume-plus-gotenberg
     ports:
       - "127.0.0.1:3000:3000"
@@ -204,7 +208,7 @@ systemctl restart nginx
 
 # ---- 9. 配环境变量 ----
 info "配置环境变量..."
-mkdir -p /opt/resume-plus/uploads
+mkdir -p /opt/resume-plus/upload
 
 cat > /opt/resume-plus/.env << ENV
 DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
@@ -213,6 +217,8 @@ PGVECTOR_PASSWORD=${MYSQL_PASSWORD}
 JWT_SECRET=${JWT_SECRET}
 MYSQL_USERNAME=root
 MYSQL_PASSWORD=${MYSQL_PASSWORD}
+ALIYUN_SMS_ACCESS_KEY_ID=${ALIYUN_SMS_ACCESS_KEY_ID}
+ALIYUN_SMS_SECRET=${ALIYUN_SMS_SECRET}
 ENV
 
 # ---- 10. 创建 systemd 服务 ----

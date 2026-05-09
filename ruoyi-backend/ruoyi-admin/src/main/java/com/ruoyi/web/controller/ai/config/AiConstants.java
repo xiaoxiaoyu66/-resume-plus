@@ -47,7 +47,7 @@ public class AiConstants {
     // ========== 数值常量 ==========
 
     /** 每日提问次数上限 */
-    public static final int DAILY_QUOTA_LIMIT = 50;
+    public static final int DAILY_QUOTA_LIMIT = 500;
 
     /** SSE 超时（毫秒） */
     public static final long SSE_TIMEOUT_MS = 300_000L;

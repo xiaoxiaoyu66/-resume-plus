@@ -30,7 +30,7 @@ minio:
 # PGVector 向量数据库配置
 pgvector:
   # PostgreSQL 地址
-  host: 192.168.132.136
+  host: localhost
   # 端口
   port: 5433
   # 数据库名
@@ -41,9 +41,9 @@ pgvector:
   # 连接池配置
   max-connections: 10
 
-# PDF 生成 — Gotenberg（Docker 内用 gotenberg:3000，本地开发用 Kali VM 地址）
+# PDF 生成 — Gotenberg（Docker 内用 gotenberg:3000，生产环境用 localhost:3000）
 gotenberg:
-  url: http://192.168.132.136:3000
+  url: http://localhost:3000
 
 # Embedding 服务配置 (使用 SiliconFlow API)
 embedding:
@@ -85,8 +85,8 @@ ruoyi:
   version: 3.9.2
   # 版权年份
   copyrightYear: 2026
-  # 文件路径 示例（ Windows配置D:/ruoyi/uploadPath，Linux配置 /home/ruoyi/uploadPath）
-  profile: D:/ruoyi/uploadPath
+  # 文件路径 示例（ Windows配置D:/ruoyi/uploadPath，Linux配置 /opt/resume-plus/upload）
+  profile: /opt/resume-plus/upload
   # 获取ip地址开关
   addressEnabled: false
   # 验证码类型 math 数字计算 char 字符验证

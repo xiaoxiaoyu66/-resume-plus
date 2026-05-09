@@ -1,6 +1,7 @@
 package com.ruoyi.web.controller.ai;
 
 import com.ruoyi.common.core.domain.AjaxResult;
+import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.web.controller.ai.service.ChatCacheService;
 import com.ruoyi.web.controller.ai.service.impl.EnhancedChatServiceImpl;
 import org.slf4j.Logger;
@@ -14,10 +15,10 @@ import java.util.List;
 
 /**
  * SSE 流式对话控制器
+ * 所有接口从 JWT 获取用户身份，拒绝客户端传入 userId
  */
 @RestController
 @RequestMapping("/ai/chat")
-@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class SseChatController {
 
     private static final Logger log = LoggerFactory.getLogger(SseChatController.class);
@@ -26,35 +27,18 @@ public class SseChatController {
     private EnhancedChatServiceImpl enhancedChatService;
 
     /**
-     * SSE 流式对话接口
-     *
-     * 前端使用示例：
-     * const eventSource = new EventSource('/ai/chat/stream?userId=1&message=你好');
-     * eventSource.onmessage = (event) => {
-     *     const data = JSON.parse(event.data);
-     *     if (data.token) {
-     *         // 逐字显示
-     *         appendToken(data.token);
-     *     }
-     * };
-     *
-     * @param userId 用户ID
-     * @param sessionId 会话ID（可选）
-     * @param message 用户消息
-     * @param fileNames 关联文件名列表（可选）
-     * @param scene 场景（可选，默认default）
-     * @param resumeContext 简历上下文JSON（仅interview场景使用）
-     * @return SseEmitter
+     * SSE 流式对话接口（GET）
+     * 用户身份从 JWT 中获取，前端无需传 userId
      */
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamChat(
-            @RequestParam("userId") Long userId,
             @RequestParam(value = "sessionId", required = false) Long sessionId,
             @RequestParam("message") String message,
             @RequestParam(value = "fileNames", required = false) List<String> fileNames,
             @RequestParam(value = "scene", defaultValue = "default") String scene,
             @RequestParam(value = "resumeContext", required = false) String resumeContext) {
 
+        Long userId = SecurityUtils.getUserId();
         log.info("SSE流式对话请求: userId={}, sessionId={}, scene={}", userId, sessionId, scene);
 
         try {
@@ -68,18 +52,18 @@ public class SseChatController {
     }
 
     /**
-     * POST 方式 SSE 流式对话（支持更长消息）
+     * SSE 流式对话接口（POST，支持更长消息）
+     * 用户身份从 JWT 中获取
      */
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamChatPost(
-            @RequestParam("userId") Long userId,
             @RequestParam(value = "sessionId", required = false) Long sessionId,
             @RequestParam("message") String message,
             @RequestParam(value = "fileNames", required = false) List<String> fileNames,
             @RequestParam(value = "scene", defaultValue = "default") String scene,
             @RequestParam(value = "resumeContext", required = false) String resumeContext) {
 
-        return streamChat(userId, sessionId, message, fileNames, scene, resumeContext);
+        return streamChat(sessionId, message, fileNames, scene, resumeContext);
     }
 
     /**

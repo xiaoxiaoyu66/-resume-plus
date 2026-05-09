@@ -8,6 +8,7 @@ import { marked } from 'marked'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
 import { ElMessage } from 'element-plus'
+import { sanitizeHtml } from '@/utils/sanitize'
 
 const props = defineProps({
   content: {
@@ -45,12 +46,13 @@ marked.setOptions({
   }
 })
 
-// 渲染 Markdown
+// 渲染 Markdown（输出经 XSS 过滤）
 const renderedContent = computed(() => {
   if (!props.content) return ''
   // 先解码内容中的 HTML 实体
   const decodedContent = decodeHtmlEntities(props.content)
-  return marked(decodedContent)
+  const rawHtml = marked(decodedContent) as string
+  return sanitizeHtml(rawHtml)
 })
 
 // 添加代码复制按钮

@@ -15,7 +15,6 @@ interface SseChatOptions {
 }
 
 interface StreamChatParams {
-  userId: number
   sessionId?: number | null
   message: string
   fileNames?: string[]
@@ -46,11 +45,10 @@ class SseChatClient {
     // 关闭之前的连接
     this.close();
 
-    const { userId, sessionId, message, fileNames, scene = 'default', resumeContext } = params;
+    const { sessionId, message, fileNames, scene = 'default', resumeContext } = params;
 
-    // 构建 URL
+    // 构建 URL（用户身份由后端从 JWT 获取）
     const queryParams = new URLSearchParams();
-    queryParams.append('userId', String(userId));
     queryParams.append('message', message);
     queryParams.append('scene', scene);
     if (sessionId) queryParams.append('sessionId', String(sessionId));

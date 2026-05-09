@@ -101,6 +101,7 @@ import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick, reactive } 
 import { ElMessage as ElMsg } from 'element-plus'
 import { marked } from 'marked'
 import { aiResumeAction } from '@/api/resume'
+import { sanitizeHtmlStrict } from '@/utils/sanitize'
 
 interface ActiveTags {
   b: boolean
@@ -131,9 +132,9 @@ const aiKeywords = ref<string[]>([])
 const previewHtml = computed(() => {
   const html = localValue.value || ''
   if (/<[a-z][\s\S]*>/i.test(html)) {
-    return html
+    return sanitizeHtmlStrict(html)
   }
-  return marked(html) as string
+  return sanitizeHtmlStrict(marked(html) as string)
 })
 
 function exec(command: string) {
