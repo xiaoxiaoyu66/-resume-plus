@@ -27,8 +27,9 @@
 ## 🌐 在线体验
 
 <p align="center" style="font-size:20px;padding:16px;background:#e8f4fd;border-radius:10px;border:2px solid #667eea;">
-  🔗 <strong><a href="https://he2wa.xin" target="_blank">https://he2wa.xin</a></strong>
+  🔗 <strong><a href="" target="_blank">https://he2wa.xin</a></strong>
 </p>
+
 
 <p align="center">
   <strong>账号：</strong> <code>admin</code> ／ <strong>密码：</strong> <code>admin123</code>
@@ -68,14 +69,18 @@
 | 模块 | 功能 | 说明 |
 |------|------|------|
 | **AI 引擎** | DeepSeek SSE 流式对话 | 首 token < 800ms，四场景提示词切换 |
+| | 双模式面试：HR行为面 + 专业面试 | HR面关注软素质/稳定性，专业面按目标岗位动态出题（销售/运营/设计/产品/财务/技术等） |
+| | 面试追问逻辑 | 像真实面试官一样连续追问2-3轮挖透话题，非一次性出题 |
 | | 滑动上下文窗口（5 轮 + 3000 token） | 平衡记忆深度与 token 消耗 |
 | | 双层语义缓存（Caffeine L1 + Redis L2） | 相似度 0.85 命中直接返回 |
+| | PDF 排版还原（CoordinateTextStripper） | y坐标排序 + 两栏布局检测，解决PDF左右栏文字交错 |
+| | AI 解析结果校验重试 | 自动检查姓名/手机/邮箱/教育/技能等关键字段，缺失时重问 |
 | **简历管理** | 模块化编辑器（7 大模块） | 基本信息 / 教育 / 经历 / 项目 / 技能 / 意向 / 评价 |
 | | 三套模板渲染 | 经典 / 简约 / 现代 |
 | | Undo/Redo（50 层快照） | 全局状态回溯 |
 | | AI 四维诊断 | 评分 + 建议 + 润色 + 关键词 |
-| | PDF / PNG 导出 | Gotenberg 渲染 PDF，html2canvas 生成 PNG |
-| | 文件解析 | PDF/Word 上传 → AI 提取结构化 JSON |
+| | PDF / PNG / Word 导出 | Gotenberg 渲染 PDF，html2canvas 生成 PNG，POI 生成 Word |
+| | 文件解析 | PDF/Word 上传 → 排版还原 → AI 提取结构化 JSON → 校验重试 |
 | **岗位匹配** | PGVector 向量存储 | ivfflat 索引，语义级技能匹配 |
 | | BGE-M3 嵌入 + 余弦相似度 | 基于简历内容自动计算岗位匹配度 |
 | | 江城聘侧边栏 | 首页侧边栏展示匹配岗位，按分数排序 |
@@ -260,7 +265,7 @@ sudo ./deploy.sh
 ```
 resume-plus/
 ├── ruoyi-backend/             # Spring Boot 多模块
-│   ├── ruoyi-admin/           # 启动入口 + AI 控制器
+│   ├── ruoyi-admin/           # 启动入口 + AI 控制器（含PDF坐标提取器 CoordinateTextStripper）
 │   ├── ruoyi-common/          # 公共工具
 │   ├── ruoyi-framework/       # 安全 + 配置
 │   ├── ruoyi-system/          # 系统业务

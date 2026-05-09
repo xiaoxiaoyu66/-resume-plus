@@ -141,7 +141,7 @@ done
 # ---- 6. 构建前端 ----
 info "构建前端..."
 cd ruoyi-front
-npm install --production
+npm install
 npm run build
 cd ..
 

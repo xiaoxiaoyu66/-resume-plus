@@ -20,7 +20,7 @@ public class ChatSession {
     /** 模型类型 */
     private String modelType;
 
-    /** 场景（default/resume/interview/career） */
+    /** 场景（default/resume/interview-hr/interview-pro/career） */
     private String scene;
 
     /** 关联简历ID */

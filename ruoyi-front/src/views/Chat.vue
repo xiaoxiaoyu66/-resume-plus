@@ -16,13 +16,6 @@
     <div class="chat-layout">
       <!-- 侧边栏 -->
       <aside class="chat-sidebar" :class="{ collapsed: !showSidebar }">
-        <div class="sidebar-header">
-          <button class="new-chat-btn" @click="startNewChat">
-            <span class="new-chat-icon">✦</span>
-            <span>新建对话</span>
-          </button>
-        </div>
-
         <div class="sidebar-body">
           <!-- 加载中 -->
           <div v-if="sessionsLoading" class="sidebar-loading">
@@ -74,7 +67,11 @@
       <!-- 主区域 -->
       <main class="chat-main">
 
-      <div v-if="!hasStarted" class="empty-state">
+      <div v-if="loadingHistory" class="loading-history">
+        <el-icon class="loading-spin"><Loading /></el-icon>
+        <span>加载对话历史...</span>
+      </div>
+      <div v-else-if="!hasStarted" class="empty-state">
       <!-- 简历+ Logo -->
       <div class="logo-lishizhen">
         <span class="logo-char" :class="{ 'typing': showChar1 }">简</span>
@@ -155,8 +152,12 @@
       <div v-else class="chat-container">
       <!-- 消息列表 -->
       <div class="message-list" ref="messageListRef">
-        <div 
-          v-for="(msg, index) in messages" 
+        <!-- 历史对话无消息时的提示 -->
+        <div v-if="messages.length === 0" class="history-empty-hint">
+          <p>暂无对话记录，发送消息开始对话</p>
+        </div>
+        <div
+          v-for="(msg, index) in messages"
           :key="index"
           :class="['message-item', msg.role]"
         >
@@ -278,6 +279,7 @@
 <script setup lang="ts">
 import { ref, nextTick, onMounted, watch, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { Loading } from '@element-plus/icons-vue'
 import MarkdownRenderer from '@/components/MarkdownRenderer.vue'
 import FileUploadProgress from '@/components/FileUploadProgress.vue'
 import { useChatUpload } from '@/composables/useChatUpload'
@@ -305,7 +307,8 @@ function closeSceneMenu() {
 const sceneOptions = [
   { label: '💬 综合', value: 'default' },
   { label: '📄 简历诊断', value: 'resume' },
-  { label: '🎯 面试模拟', value: 'interview' },
+  { label: '👥 HR面试', value: 'interview-hr' },
+  { label: '💼 专业面试', value: 'interview-pro' },
   { label: '🧭 职业规划', value: 'career' },
 ]
 const currentScene = ref('default')
@@ -338,6 +341,11 @@ function scrollToBottom() {
       messageListRef.value.scrollTop = messageListRef.value.scrollHeight
     }
   })
+}
+// 在内容可能还在异步渲染时多试一次
+function scrollToBottomDelayed() {
+  scrollToBottom()
+  setTimeout(() => scrollToBottom(), 100)
 }
 
 const {
@@ -375,7 +383,7 @@ const { sendMessage, stopSse } = useChatSse({
   currentScene
 })
 
-const { loadSessionHistory, resetChat } = useChatSession({
+const { loadSessionHistory, resetChat, loadingHistory } = useChatSession({
   messages,
   hasStarted,
   userInput,
@@ -457,6 +465,7 @@ onMounted(async () => {
   if (sessionId && sessionId !== 'undefined' && sessionId !== '') {
     await loadSessionHistory(sessionId)
     hasResume.value = !!sessionStorage.getItem('session_resume_' + sessionId)
+    nextTick(() => scrollToBottomDelayed())
   }
   fetchSessions()
   startLogoAnimation()
@@ -468,12 +477,14 @@ onUnmounted(() => {
   window.removeEventListener('use-file-from-space', handleFileFromSpace)
 })
 
-watch(() => route.query.sessionId, (newId) => {
+watch(() => route.query.sessionId, async (newId) => {
   if (newId && newId !== 'undefined' && newId !== '') {
-    loadSessionHistory(newId as string)
-    // 延迟一帧检查 resume 绑定
+    resetChat()
+    await loadSessionHistory(newId as string)
+    // 延迟一帧检查 resume 绑定并滚动到底部
     nextTick(() => {
       hasResume.value = !!sessionStorage.getItem('session_resume_' + newId)
+      scrollToBottomDelayed()
     })
   } else {
     resetChat()
@@ -507,6 +518,27 @@ $accent-red: #8b1a1a;
   display: flex;
   flex-direction: column;
   background: $paper-white;
+}
+
+/* ---- 加载中 ---- */
+.loading-history {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: $ink-pale;
+  font-size: 14px;
+
+  .loading-spin {
+    font-size: 28px;
+    animation: loading-rotate 1s linear infinite;
+  }
+}
+
+@keyframes loading-rotate {
+  to { transform: rotate(360deg); }
 }
 
 /* ---- 空状态 ---- */
@@ -841,11 +873,22 @@ $accent-red: #8b1a1a;
   width: 100%;
   margin: 0 auto;
   padding: 80px 20px 0;
+  overflow: hidden;
 
   .message-list {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
     padding: 20px 0;
+
+    .history-empty-hint {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      color: #999;
+      font-size: 14px;
+    }
 
     .message-item {
       display: flex;
@@ -1032,39 +1075,9 @@ $accent-red: #8b1a1a;
   }
 }
 
-.sidebar-header {
-  padding: 16px;
-  flex-shrink: 0;
-}
-
-.new-chat-btn {
-  width: 100%;
-  padding: 10px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 14px;
-  font-family: 'Noto Serif SC', 'STSong', serif;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.2);
-  }
-
-  .new-chat-icon {
-    font-size: 16px;
-  }
-}
-
 .sidebar-body {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 0 8px 12px;
 

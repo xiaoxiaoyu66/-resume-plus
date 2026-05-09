@@ -203,22 +203,39 @@
 
     <!-- ============ 面试模式 ============ -->
     <div v-if="activeTab === 'interview'" class="tab-body">
-      <div class="interview-start">
+      <div v-if="!interviewActive" class="interview-start">
         <el-icon :size="36" color="#409eff"><Mic /></el-icon>
         <h3>AI 面试模拟</h3>
-        <p>基于当前简历内容，AI 将扮演面试官对你进行模拟面试。</p>
-        <p class="interview-hint">面试官会根据你的简历提问，每次回答后给出点评和建议。</p>
-        <el-button
-          type="primary"
-          :loading="interviewStarting"
-          @click="startInterview"
-        >
-          开始面试
-        </el-button>
+        <p>基于当前简历内容，选择面试类型开始模拟面试。</p>
+        <div class="interview-mode-buttons">
+          <el-button
+            type="primary"
+            :loading="interviewStarting && interviewMode === 'hr'"
+            :disabled="interviewStarting"
+            @click="startInterview('hr')"
+          >
+            👥 HR 行为面试
+          </el-button>
+          <el-button
+            type="success"
+            :loading="interviewStarting && interviewMode === 'pro'"
+            :disabled="interviewStarting"
+            @click="startInterview('pro')"
+          >
+            💼 专业面试
+          </el-button>
+        </div>
+        <p class="interview-hint">HR面关注稳定性、职业规划、软素质；专业面按目标岗位出专业题。</p>
       </div>
 
       <!-- 面试中的对话 -->
       <div v-if="interviewActive" class="interview-chat">
+        <div class="interview-mode-badge">
+          <el-tag :type="interviewMode === 'hr' ? 'primary' : 'success'" size="small">
+            {{ interviewMode === 'hr' ? '👥 HR 行为面试' : '💼 专业面试' }}
+          </el-tag>
+          <el-button size="small" text @click="endInterview">结束面试</el-button>
+        </div>
         <div ref="interviewMessagesRef" class="chat-messages">
           <div
             v-for="(msg, i) in interviewMessages"
@@ -546,6 +563,7 @@ function scrollDiagnosisToBottom() {
 // ========== 面试 ==========
 const interviewStarting = ref(false)
 const interviewActive = ref(false)
+const interviewMode = ref<'hr' | 'pro'>('hr')
 const interviewInput = ref('')
 const interviewMessagesRef = ref<HTMLElement | null>(null)
 const interviewMessages = ref<{ role: string; content: string }[]>([])
@@ -622,13 +640,13 @@ async function doMatchJobs() {
   }
 }
 
-async function startInterview() {
+async function startInterview(mode: 'hr' | 'pro') {
+  interviewMode.value = mode
   interviewStarting.value = true
   interviewActive.value = true
   activeTab.value = 'interview'
 
   const resumeContext = buildResumeContext()
-  const userId = JSON.parse(localStorage.getItem('userInfo') || '{}')?.userId || 1
 
   await nextTick()
 
@@ -661,9 +679,8 @@ async function startInterview() {
   })
 
   interviewSseClient.streamChat({
-    userId,
     message: '请根据我的简历开始面试',
-    scene: 'interview',
+    scene: 'interview-' + interviewMode.value,
     resumeContext
   }).catch(() => {
     interviewThinking.value = false
@@ -671,6 +688,16 @@ async function startInterview() {
   }).finally(() => {
     interviewStarting.value = false
   })
+}
+
+function endInterview() {
+  interviewActive.value = false
+  interviewMessages.value = []
+  interviewSessionId = null
+  if (interviewSseClient) {
+    interviewSseClient.close()
+    interviewSseClient = null
+  }
 }
 
 function sendInterviewMessage() {
@@ -681,8 +708,6 @@ function sendInterviewMessage() {
   interviewInput.value = ''
   interviewThinking.value = true
   scrollInterviewToBottom()
-
-  const userId = JSON.parse(localStorage.getItem('userInfo') || '{}')?.userId || 1
 
   interviewSseClient = new SseChatClient({
     onToken: (token, fullContent) => {
@@ -712,10 +737,9 @@ function sendInterviewMessage() {
   })
 
   interviewSseClient.streamChat({
-    userId,
     sessionId: interviewSessionId ? Number(interviewSessionId) : null,
     message: text,
-    scene: 'interview'
+    scene: 'interview-' + interviewMode.value
   }).catch(() => {
     interviewThinking.value = false
   })
@@ -1033,6 +1057,20 @@ function sendInterviewMessage() {
 .interview-hint {
   color: #999;
   font-size: 12px;
+}
+
+.interview-mode-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.interview-mode-badge {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid #eee;
 }
 
 /* 岗位匹配 */

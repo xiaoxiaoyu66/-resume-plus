@@ -63,6 +63,16 @@ export function exportResumePdf(data: Record<string, unknown>) {
   })
 }
 
+export function exportResumeWord(data: Record<string, unknown>) {
+  return request({
+    url: '/resume/export/word',
+    method: 'post',
+    data,
+    responseType: 'blob',
+    timeout: 30000
+  })
+}
+
 export function parseResumeFile(file: File) {
   const formData = new FormData()
   formData.append('file', file)

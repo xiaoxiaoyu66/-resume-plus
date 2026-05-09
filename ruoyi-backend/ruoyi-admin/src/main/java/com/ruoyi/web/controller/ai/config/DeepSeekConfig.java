@@ -50,7 +50,7 @@ public class DeepSeekConfig {
 
     /**
      * 获取指定场景的System Prompt
-     * @param scene 场景：default/resume/interview/career
+     * @param scene 场景：default/resume/interview-hr/interview-pro/career
      * @return System Prompt
      */
     public String getSystemPromptByScene(String scene) {

@@ -10,14 +10,21 @@
     <!-- 格式选择 -->
     <div v-if="!selectedFormat && !exporting && !exportSuccess" class="format-select">
       <div class="format-grid">
-        <div class="format-card pdf-card" @click="startExport('pdf')">
+        <div class="format-card" @click="startExport('pdf')">
           <div class="format-icon">
             <el-icon :size="36"><Document /></el-icon>
           </div>
           <span class="format-label">PDF</span>
           <span class="format-desc">适合打印、投递</span>
         </div>
-        <div class="format-card png-card" @click="startExport('png')">
+        <div class="format-card" @click="startExport('word')">
+          <div class="format-icon">
+            <el-icon :size="36"><Notebook /></el-icon>
+          </div>
+          <span class="format-label">Word</span>
+          <span class="format-desc">适合编辑、修改</span>
+        </div>
+        <div class="format-card" @click="startExport('png')">
           <div class="format-icon">
             <el-icon :size="36"><Picture /></el-icon>
           </div>
@@ -30,13 +37,13 @@
     <!-- 导出中 -->
     <div v-if="exporting" class="exporting-state">
       <el-icon class="loading-icon" color="#409eff" :size="48"><Loading /></el-icon>
-      <p class="exporting-text">正在生成{{ selectedFormat === 'pdf' ? ' PDF' : ' PNG' }} 文件...</p>
+      <p class="exporting-text">正在生成 {{ formatLabel }} 文件...</p>
     </div>
 
     <!-- 导出成功 -->
     <div v-else-if="exportSuccess" class="export-success">
       <el-icon class="success-icon" color="#67c23a" :size="48"><CircleCheck /></el-icon>
-      <p class="success-text">{{ selectedFormat === 'pdf' ? 'PDF' : 'PNG' }} 已生成并下载</p>
+      <p class="success-text">{{ formatLabel }} 已生成并下载</p>
     </div>
 
     <!-- 导出失败 -->
@@ -69,8 +76,9 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { CircleCheck, Close, Loading, Document, Picture } from '@element-plus/icons-vue'
-import { exportResumePdf } from '@/api/resume'
+import { CircleCheck, Close, Loading, Document, Picture, Notebook } from '@element-plus/icons-vue'
+import { exportResumePdf, exportResumeWord } from '@/api/resume'
+import { useResumeStore } from '@/store/resume'
 
 const props = defineProps<{
   modelValue: boolean
@@ -79,6 +87,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
 }>()
+
+const resumeStore = useResumeStore()
 
 const dialogVisible = computed({
   get: () => props.modelValue,
@@ -97,6 +107,11 @@ const exporting = ref(false)
 const exportSuccess = ref(false)
 const exportError = ref('')
 
+const formatLabel = computed(() => {
+  const labels: Record<string, string> = { pdf: 'PDF', word: 'Word', png: 'PNG' }
+  return labels[selectedFormat.value || ''] || ''
+})
+
 const jobSites = [
   { name: 'BOSS直聘', url: 'https://www.zhipin.com' },
   { name: '拉勾网', url: 'https://www.lagou.com' },
@@ -114,6 +129,8 @@ const retryExport = () => {
   exportError.value = ''
   if (selectedFormat.value === 'pdf') {
     generatePDF()
+  } else if (selectedFormat.value === 'word') {
+    generateWord()
   } else {
     generatePNG()
   }
@@ -123,6 +140,8 @@ function startExport(format: string) {
   selectedFormat.value = format
   if (format === 'pdf') {
     generatePDF()
+  } else if (format === 'word') {
+    generateWord()
   } else {
     generatePNG()
   }
@@ -192,6 +211,33 @@ ${clone.outerHTML}
   }
 }
 
+const generateWord = async () => {
+  exporting.value = true
+  exportError.value = ''
+  exportSuccess.value = false
+
+  try {
+    const content = JSON.parse(JSON.stringify(resumeStore.content))
+    const blob = await exportResumeWord({ content }) as any
+
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = '简历.docx'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    setTimeout(() => URL.revokeObjectURL(url), 3000)
+
+    exportSuccess.value = true
+  } catch (e: any) {
+    console.error('Word导出失败:', e)
+    exportError.value = 'Word 生成失败: ' + (e.message || '未知错误')
+  } finally {
+    exporting.value = false
+  }
+}
+
 const generatePNG = async () => {
   exporting.value = true
   exportError.value = ''
@@ -231,8 +277,8 @@ const generatePNG = async () => {
 
 .format-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
 }
 
 .format-card {
@@ -240,7 +286,7 @@ const generatePNG = async () => {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  padding: 28px 20px;
+  padding: 24px 12px;
   border: 2px solid #e4e7ed;
   border-radius: 12px;
   cursor: pointer;
@@ -260,13 +306,13 @@ const generatePNG = async () => {
 }
 
 .format-card .format-label {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   color: #0a0a0a;
 }
 
 .format-card .format-desc {
-  font-size: 12px;
+  font-size: 11px;
   color: #909399;
 }
 

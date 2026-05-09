@@ -134,7 +134,7 @@ const previewHtml = computed(() => {
   if (/<[a-z][\s\S]*>/i.test(html)) {
     return sanitizeHtmlStrict(html)
   }
-  return sanitizeHtmlStrict(marked.parse(html) || '')
+  return sanitizeHtmlStrict(String(marked.parse(html)) || '')
 })
 
 function exec(command: string) {

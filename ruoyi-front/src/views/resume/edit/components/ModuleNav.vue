@@ -67,7 +67,10 @@ const moduleMeta: Record<string, ModuleMeta> = {
   intention: { key: 'intention', label: '求职意向', canHide: true, arrayType: false },
   education: { key: 'education', label: '教育经历', canHide: false, arrayType: true },
   experience: { key: 'experience', label: '工作经历', canHide: true, arrayType: true },
+  campus: { key: 'campus', label: '校园经历', canHide: true, arrayType: true },
   projects: { key: 'projects', label: '项目经验', canHide: true, arrayType: true },
+  awards: { key: 'awards', label: '荣誉奖项', canHide: true, arrayType: true },
+  certificates: { key: 'certificates', label: '证书', canHide: true, arrayType: true },
   skills: { key: 'skills', label: '技能特长', canHide: true, arrayType: false },
   evaluation: { key: 'evaluation', label: '自我评价', canHide: true, arrayType: false }
 }

@@ -110,13 +110,34 @@
             </el-select>
           </el-form-item>
           <el-form-item label="时间段" required>
-            <el-date-picker v-model="edu.start" type="month" placeholder="开始时间" value-format="YYYY.MM" style="width: 45%" />
-            <span style="margin: 0 8px">-</span>
-            <el-date-picker v-model="edu.end" type="month" placeholder="结束时间" value-format="YYYY.MM" style="width: calc(45% - 56px)" :disabled="edu.end === '至今'" />
-            <el-checkbox :model-value="edu.end === '至今'" @update:model-value="c => { edu.end = c ? '至今' : '' }" size="small">至今</el-checkbox>
+            <DateRangePicker :model-value="{ start: edu.start, end: edu.end }" @update:model-value="v => { edu.start = v.start; edu.end = v.end }" />
           </el-form-item>
           <el-form-item label="GPA">
-            <el-input v-model="edu.gpa" placeholder="如：3.8/4.0" />
+            <el-input v-model="edu.gpa" placeholder="如：3.8/4.0 · 前10%" />
+          </el-form-item>
+          <el-form-item label="主修课程">
+            <div class="courses-input-wrap">
+              <el-tag
+                v-for="(c, ci) in edu.courses"
+                :key="ci"
+                closable
+                size="small"
+                class="course-tag"
+                @close="removeCourse(edu, ci)"
+              >{{ c }}</el-tag>
+              <el-input
+                v-if="edu._courseInputVisible"
+                ref="courseInputRef"
+                v-model="edu._courseValue"
+                size="small"
+                style="width: 100px"
+                @keyup.enter="confirmCourse(edu)"
+                @blur="confirmCourse(edu)"
+              />
+              <el-button v-else type="primary" link size="small" @click="showCourseInput(edu)">
+                <el-icon><Plus /></el-icon>添加
+              </el-button>
+            </div>
           </el-form-item>
         </el-form>
       </div>
@@ -146,17 +167,49 @@
             <el-input v-model="exp.position" placeholder="职位名称" />
           </el-form-item>
           <el-form-item label="时间段" required>
-            <el-date-picker v-model="exp.start" type="month" placeholder="开始时间" value-format="YYYY.MM" style="width: 45%" />
-            <span style="margin: 0 8px">-</span>
-            <el-date-picker v-model="exp.end" type="month" placeholder="结束时间" value-format="YYYY.MM" style="width: calc(45% - 56px)" :disabled="exp.end === '至今'" />
-            <el-checkbox :model-value="exp.end === '至今'" @update:model-value="c => { exp.end = c ? '至今' : '' }" size="small">至今</el-checkbox>
+            <DateRangePicker :model-value="{ start: exp.start, end: exp.end }" @update:model-value="v => { exp.start = v.start; exp.end = v.end }" />
           </el-form-item>
           <el-form-item label="工作描述" required>
-            <MarkdownTextarea v-model="exp.desc" placeholder="描述你的工作职责和成果，支持 Markdown 语法" />
+            <div class="star-hint">💡 建议按 STAR 格式：情境 → 任务 → 行动 → 量化结果</div>
+            <MarkdownTextarea v-model="exp.desc" :placeholder="'如：独立负责用户中心重构，日活 50w+，接口响应从 800ms 降到 120ms'" />
           </el-form-item>
         </el-form>
       </div>
       <el-empty v-if="content.experience.length === 0" description="暂无工作经历" :image-size="60" />
+    </section>
+
+    <!-- 校园经历 -->
+    <section id="section-campus" class="form-section" v-show="moduleVisibility.campus" :style="{ order: getOrder('campus') }">
+      <h3 class="section-title">
+        校园经历
+        <el-button type="primary" link size="small" @click="addCampus">
+          <el-icon><Plus /></el-icon>添加
+        </el-button>
+      </h3>
+      <div v-for="(item, index) in content.campus" :key="index" class="item-card">
+        <div class="item-header">
+          <span>经历 {{ index + 1 }}</span>
+          <el-button type="danger" link size="small" @click="removeCampus(index)">
+            <el-icon><Delete /></el-icon>删除
+          </el-button>
+        </div>
+        <el-form :model="item" label-width="80px" size="default">
+          <el-form-item label="组织" required>
+            <el-input v-model="item.organization" placeholder="如：学生会/社团/志愿者团队" />
+          </el-form-item>
+          <el-form-item label="职位" required>
+            <el-input v-model="item.position" placeholder="如：外联部部长" />
+          </el-form-item>
+          <el-form-item label="时间段" required>
+            <DateRangePicker :model-value="{ start: item.start, end: item.end }" @update:model-value="v => { item.start = v.start; item.end = v.end }" />
+          </el-form-item>
+          <el-form-item label="活动描述" required>
+            <div class="star-hint">💡 突出组织规模、活动影响、量化成果</div>
+            <MarkdownTextarea v-model="item.desc" :placeholder="'如：独立策划 300 人校园技术讲座，邀请 3 位企业嘉宾，活动满意度 92%'" />
+          </el-form-item>
+        </el-form>
+      </div>
+      <el-empty v-if="content.campus.length === 0" description="暂无校园经历" :image-size="60" />
     </section>
 
     <!-- 项目经验 -->
@@ -182,17 +235,78 @@
             <el-input v-model="proj.role" placeholder="如：后端开发" />
           </el-form-item>
           <el-form-item label="时间段" required>
-            <el-date-picker v-model="proj.start" type="month" placeholder="开始时间" value-format="YYYY.MM" style="width: 45%" />
-            <span style="margin: 0 8px">-</span>
-            <el-date-picker v-model="proj.end" type="month" placeholder="结束时间" value-format="YYYY.MM" style="width: calc(45% - 56px)" :disabled="proj.end === '至今'" />
-            <el-checkbox :model-value="proj.end === '至今'" @update:model-value="c => { proj.end = c ? '至今' : '' }" size="small">至今</el-checkbox>
+            <DateRangePicker :model-value="{ start: proj.start, end: proj.end }" @update:model-value="v => { proj.start = v.start; proj.end = v.end }" />
           </el-form-item>
           <el-form-item label="项目描述" required>
-            <MarkdownTextarea v-model="proj.desc" placeholder="描述项目背景、你的职责和成果，支持 Markdown 语法" />
+            <div class="star-hint">💡 建议按 STAR 格式：背景 → 任务 → 行动 → 量化结果</div>
+            <MarkdownTextarea v-model="proj.desc" :placeholder="'如：基于 Spring Boot + Vue 开发校园二手交易平台，上线 2 个月注册用户 2000+，日均订单 50+'" />
           </el-form-item>
         </el-form>
       </div>
       <el-empty v-if="content.projects.length === 0" description="暂无项目经验" :image-size="60" />
+    </section>
+
+    <!-- 荣誉奖项 -->
+    <section id="section-awards" class="form-section" v-show="moduleVisibility.awards" :style="{ order: getOrder('awards') }">
+      <h3 class="section-title">
+        荣誉奖项
+        <el-button type="primary" link size="small" @click="addAward">
+          <el-icon><Plus /></el-icon>添加
+        </el-button>
+      </h3>
+      <div v-for="(award, index) in content.awards" :key="index" class="item-card">
+        <div class="item-header">
+          <span>奖项 {{ index + 1 }}</span>
+          <el-button type="danger" link size="small" @click="removeAward(index)">
+            <el-icon><Delete /></el-icon>删除
+          </el-button>
+        </div>
+        <el-form :model="award" label-width="80px" size="default">
+          <el-form-item label="奖项名称" required>
+            <el-input v-model="award.name" placeholder="如：全国大学生数学建模竞赛一等奖" />
+          </el-form-item>
+          <el-form-item label="获奖时间">
+            <el-date-picker v-model="award.date" type="month" placeholder="获奖时间" value-format="YYYY.MM" style="width: 100%" />
+          </el-form-item>
+          <el-form-item label="级别">
+            <el-select v-model="award.level" placeholder="请选择">
+              <el-option label="国家级" value="国家级" />
+              <el-option label="省级" value="省级" />
+              <el-option label="市级" value="市级" />
+              <el-option label="校级" value="校级" />
+              <el-option label="院级" value="院级" />
+            </el-select>
+          </el-form-item>
+        </el-form>
+      </div>
+      <el-empty v-if="content.awards.length === 0" description="暂无荣誉奖项" :image-size="60" />
+    </section>
+
+    <!-- 证书 -->
+    <section id="section-certificates" class="form-section" v-show="moduleVisibility.certificates" :style="{ order: getOrder('certificates') }">
+      <h3 class="section-title">
+        证书
+        <el-button type="primary" link size="small" @click="addCertificate">
+          <el-icon><Plus /></el-icon>添加
+        </el-button>
+      </h3>
+      <div v-for="(cert, index) in content.certificates" :key="index" class="item-card">
+        <div class="item-header">
+          <span>证书 {{ index + 1 }}</span>
+          <el-button type="danger" link size="small" @click="removeCertificate(index)">
+            <el-icon><Delete /></el-icon>删除
+          </el-button>
+        </div>
+        <el-form :model="cert" label-width="80px" size="default">
+          <el-form-item label="证书名称" required>
+            <el-input v-model="cert.name" placeholder="如：大学英语六级 (CET-6)" />
+          </el-form-item>
+          <el-form-item label="获得时间">
+            <el-date-picker v-model="cert.date" type="month" placeholder="获得时间" value-format="YYYY.MM" style="width: 100%" />
+          </el-form-item>
+        </el-form>
+      </div>
+      <el-empty v-if="content.certificates.length === 0" description="暂无证书" :image-size="60" />
     </section>
 
     <!-- 技能特长 -->
@@ -226,7 +340,8 @@
     <!-- 自我评价 -->
     <section id="section-evaluation" class="form-section" v-show="moduleVisibility.evaluation" :style="{ order: getOrder('evaluation') }">
       <h3 class="section-title">自我评价</h3>
-      <MarkdownTextarea v-model="content.evaluation" :rows="5" placeholder="简单描述你的优势、特点，支持 Markdown 语法" />
+      <div class="star-hint" style="margin-bottom: 8px;">💡 用 3-4 点概括核心优势，每点有事实依据</div>
+      <MarkdownTextarea v-model="content.evaluation" :rows="5" placeholder="如：计算机专业前 10%，3 个项目经验，熟悉 Java/Spring 技术栈，善于团队协作" />
     </section>
   </div>
 </template>
@@ -237,6 +352,8 @@ import { ElMessage } from 'element-plus'
 import { Plus, Delete } from '@element-plus/icons-vue'
 import { useResumeStore } from '@/store/resume'
 import MarkdownTextarea from './MarkdownTextarea.vue'
+import DateRangePicker from './DateRangePicker.vue'
+import type { EducationEntry } from '@/types/resume'
 
 const resumeStore = useResumeStore()
 const content = computed(() => resumeStore.content)
@@ -248,6 +365,7 @@ const inputVisible = ref(false)
 const inputValue = ref('')
 const skillInputRef = ref<HTMLElement | null>(null)
 const avatarInputRef = ref<HTMLElement | null>(null)
+const courseInputRef = ref<HTMLElement | null>(null)
 
 // 头像上传
 const triggerAvatarInput = () => {
@@ -279,7 +397,7 @@ const removeAvatar = () => {
 // 教育经历
 const addEducation = () => {
   content.value.education.push({
-    school: '', major: '', degree: '', start: '', end: '', gpa: ''
+    school: '', schoolId: null, major: '', degree: '', start: '', end: '', gpa: '', courses: []
   })
   resumeStore.scheduleAutoSave()
 }
@@ -287,6 +405,33 @@ const addEducation = () => {
 const removeEducation = (index: number) => {
   content.value.education.splice(index, 1)
   resumeStore.scheduleAutoSave()
+}
+
+// 主修课程
+function showCourseInput(edu: any) {
+  edu._courseValue = ''
+  edu._courseInputVisible = true
+  nextTick(() => {
+    courseInputRef.value?.focus()
+  })
+}
+
+function confirmCourse(edu: any) {
+  const val = edu._courseValue?.trim()
+  if (val) {
+    if (!Array.isArray(edu.courses)) edu.courses = []
+    edu.courses.push(val)
+    resumeStore.scheduleAutoSave()
+  }
+  edu._courseValue = ''
+  edu._courseInputVisible = false
+}
+
+function removeCourse(edu: any, index: number) {
+  if (Array.isArray(edu.courses)) {
+    edu.courses.splice(index, 1)
+    resumeStore.scheduleAutoSave()
+  }
 }
 
 // 工作经历
@@ -302,6 +447,19 @@ const removeExperience = (index: number) => {
   resumeStore.scheduleAutoSave()
 }
 
+// 校园经历
+const addCampus = () => {
+  content.value.campus.push({
+    organization: '', position: '', start: '', end: '', desc: ''
+  })
+  resumeStore.scheduleAutoSave()
+}
+
+const removeCampus = (index: number) => {
+  content.value.campus.splice(index, 1)
+  resumeStore.scheduleAutoSave()
+}
+
 // 项目经验
 const addProject = () => {
   content.value.projects.push({
@@ -312,6 +470,32 @@ const addProject = () => {
 
 const removeProject = (index: number) => {
   content.value.projects.splice(index, 1)
+  resumeStore.scheduleAutoSave()
+}
+
+// 荣誉奖项
+const addAward = () => {
+  content.value.awards.push({
+    name: '', date: '', level: ''
+  })
+  resumeStore.scheduleAutoSave()
+}
+
+const removeAward = (index: number) => {
+  content.value.awards.splice(index, 1)
+  resumeStore.scheduleAutoSave()
+}
+
+// 证书
+const addCertificate = () => {
+  content.value.certificates.push({
+    name: '', date: ''
+  })
+  resumeStore.scheduleAutoSave()
+}
+
+const removeCertificate = (index: number) => {
+  content.value.certificates.splice(index, 1)
   resumeStore.scheduleAutoSave()
 }
 
@@ -459,5 +643,26 @@ const onFormFocus = () => {
   font-size: 11px;
   color: #999;
   text-align: center;
+}
+
+/* STAR 提示 */
+.star-hint {
+  font-size: 11px;
+  color: #909399;
+  margin-bottom: 4px;
+  line-height: 1.5;
+}
+
+/* 主修课程 */
+.courses-input-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  width: 100%;
+}
+
+.course-tag {
+  margin-right: 0;
 }
 </style>

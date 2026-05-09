@@ -35,7 +35,7 @@ public class ChatController {
     /**
      * 发送对话消息（非流式）
      *
-     * @param body 请求体 { sessionId: "sess_xxx" 或数字, message: "...", tempFileIds: [...], scene: "default/resume/interview/career" }
+     * @param body 请求体 { sessionId: "sess_xxx" 或数字, message: "...", tempFileIds: [...], scene: "default/resume/interview-hr/interview-pro/career" }
      */
     @PostMapping("/ask")
     public AjaxResult ask(@RequestBody Map<String, Object> body) {

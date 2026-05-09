@@ -8,12 +8,16 @@ import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.web.controller.ai.domain.Resume;
 import com.ruoyi.web.controller.ai.service.DeepSeekService;
 import com.ruoyi.web.controller.ai.service.ChatCacheService;
+import com.ruoyi.web.controller.ai.service.CoordinateTextStripper;
 import com.ruoyi.web.controller.ai.service.IResumeService;
 import com.ruoyi.web.controller.ai.service.ResumeJobMatchService;
 import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.poi.xwpf.usermodel.XWPFRun;
+import org.apache.poi.xwpf.usermodel.XWPFTable;
+import org.apache.poi.xwpf.usermodel.XWPFTableRow;
+import org.apache.poi.xwpf.usermodel.ParagraphAlignment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +34,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -632,6 +637,212 @@ public class ResumeController extends BaseController {
         response.getOutputStream().write(gotenbergResp.body());
     }
 
+    /**
+     * 导出 Word - 接收简历 JSON 内容，服务端生成 .docx 文件
+     */
+    @PostMapping("/export/word")
+    @SuppressWarnings("unchecked")
+    public void exportWord(@RequestBody Map<String, Object> params, HttpServletResponse response) throws Exception {
+        Object contentObj = params.get("content");
+        if (contentObj == null) {
+            response.setStatus(400);
+            response.getWriter().write("缺少 content 参数");
+            return;
+        }
+
+        JSONObject content;
+        if (contentObj instanceof Map) {
+            content = JSON.parseObject(JSON.toJSONString(contentObj));
+        } else {
+            content = JSON.parseObject(contentObj.toString());
+        }
+
+        log.info("导出Word, content fields: {}", content.keySet());
+
+        try (XWPFDocument doc = new XWPFDocument()) {
+            // 标题：姓名
+            JSONObject baseInfo = content.getJSONObject("baseInfo");
+            String name = baseInfo != null ? baseInfo.getString("name") : "";
+            XWPFParagraph titlePara = doc.createParagraph();
+            titlePara.setAlignment(ParagraphAlignment.CENTER);
+            XWPFRun titleRun = titlePara.createRun();
+            titleRun.setText(name.isEmpty() ? "简历" : name);
+            titleRun.setBold(true);
+            titleRun.setFontSize(22);
+            titleRun.setFontFamily("微软雅黑");
+
+            // 联系方式
+            if (baseInfo != null) {
+                XWPFParagraph contactPara = doc.createParagraph();
+                contactPara.setAlignment(ParagraphAlignment.CENTER);
+                XWPFRun contactRun = contactPara.createRun();
+                StringBuilder contact = new StringBuilder();
+                if (isNotEmpty(baseInfo.getString("phone"))) contact.append(" ").append(baseInfo.getString("phone"));
+                if (isNotEmpty(baseInfo.getString("email"))) contact.append(" | ").append(baseInfo.getString("email"));
+                if (isNotEmpty(baseInfo.getString("city"))) contact.append(" | ").append(baseInfo.getString("city"));
+                contactRun.setText(contact.length() > 0 ? contact.substring(1) : "");
+                contactRun.setFontSize(10);
+                contactRun.setFontFamily("微软雅黑");
+                contactRun.setColor("666666");
+            }
+
+            // 求职意向
+            JSONObject intention = content.getJSONObject("intention");
+            if (intention != null && isNotEmpty(intention.getString("position"))) {
+                XWPFParagraph intentPara = doc.createParagraph();
+                XWPFRun intentRun = intentPara.createRun();
+                StringBuilder intent = new StringBuilder("【求职意向】");
+                intent.append(intention.getString("position"));
+                if (isNotEmpty(intention.getString("city"))) intent.append(" · ").append(intention.getString("city"));
+                if (isNotEmpty(intention.getString("salary"))) intent.append(" · ").append(intention.getString("salary"));
+                intentRun.setText(intent.toString());
+                intentRun.setFontSize(11);
+                intentRun.setFontFamily("微软雅黑");
+            }
+
+            // 教育经历
+            JSONArray education = content.getJSONArray("education");
+            if (education != null && !education.isEmpty()) {
+                addSectionTitle(doc, "教育经历");
+                for (int i = 0; i < education.size(); i++) {
+                    JSONObject edu = education.getJSONObject(i);
+                    XWPFParagraph p = doc.createParagraph();
+                    XWPFRun r = p.createRun();
+                    String school = edu.getString("school");
+                    String major = edu.getString("major");
+                    String degree = edu.getString("degree");
+                    String period = buildPeriod(edu.getString("start"), edu.getString("end"));
+                    String gpa = edu.getString("gpa");
+                    StringBuilder line = new StringBuilder();
+                    if (isNotEmpty(school)) line.append(school);
+                    if (isNotEmpty(major)) line.append(" | ").append(major);
+                    if (isNotEmpty(degree)) line.append(" | ").append(degree);
+                    if (isNotEmpty(period)) line.append(" | ").append(period);
+                    if (isNotEmpty(gpa)) line.append(" | GPA: ").append(gpa);
+                    r.setText(line.toString());
+                    r.setFontSize(10);
+                    r.setFontFamily("微软雅黑");
+                }
+            }
+
+            // 工作经历
+            JSONArray experience = content.getJSONArray("experience");
+            if (experience != null && !experience.isEmpty()) {
+                addSectionTitle(doc, "工作经历");
+                for (int i = 0; i < experience.size(); i++) {
+                    JSONObject exp = experience.getJSONObject(i);
+                    XWPFParagraph p = doc.createParagraph();
+                    XWPFRun r = p.createRun();
+                    String company = exp.getString("company");
+                    String position = exp.getString("position");
+                    String period = buildPeriod(exp.getString("start"), exp.getString("end"));
+                    StringBuilder line = new StringBuilder();
+                    if (isNotEmpty(company)) line.append(company);
+                    if (isNotEmpty(position)) line.append(" · ").append(position);
+                    if (isNotEmpty(period)) line.append("  (").append(period).append(")");
+                    r.setText(line.toString());
+                    r.setBold(true);
+                    r.setFontSize(10);
+                    r.setFontFamily("微软雅黑");
+
+                    String desc = exp.getString("desc");
+                    if (isNotEmpty(desc)) {
+                        XWPFParagraph descP = doc.createParagraph();
+                        XWPFRun descR = descP.createRun();
+                        descR.setText(desc);
+                        descR.setFontSize(10);
+                        descR.setFontFamily("微软雅黑");
+                    }
+                }
+            }
+
+            // 项目经验
+            JSONArray projects = content.getJSONArray("projects");
+            if (projects != null && !projects.isEmpty()) {
+                addSectionTitle(doc, "项目经验");
+                for (int i = 0; i < projects.size(); i++) {
+                    JSONObject proj = projects.getJSONObject(i);
+                    XWPFParagraph p = doc.createParagraph();
+                    XWPFRun r = p.createRun();
+                    String projectName = proj.getString("name");
+                    String role = proj.getString("role");
+                    String period = buildPeriod(proj.getString("start"), proj.getString("end"));
+                    StringBuilder line = new StringBuilder();
+                    if (isNotEmpty(projectName)) line.append(projectName);
+                    if (isNotEmpty(role)) line.append(" · ").append(role);
+                    if (isNotEmpty(period)) line.append("  (").append(period).append(")");
+                    r.setText(line.toString());
+                    r.setBold(true);
+                    r.setFontSize(10);
+                    r.setFontFamily("微软雅黑");
+
+                    String desc = proj.getString("desc");
+                    if (isNotEmpty(desc)) {
+                        XWPFParagraph descP = doc.createParagraph();
+                        XWPFRun descR = descP.createRun();
+                        descR.setText(desc);
+                        descR.setFontSize(10);
+                        descR.setFontFamily("微软雅黑");
+                    }
+                }
+            }
+
+            // 技能特长
+            JSONArray skills = content.getJSONArray("skills");
+            if (skills != null && !skills.isEmpty()) {
+                addSectionTitle(doc, "技能特长");
+                XWPFParagraph p = doc.createParagraph();
+                XWPFRun r = p.createRun();
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < skills.size(); i++) {
+                    if (i > 0) sb.append("、");
+                    sb.append(skills.getString(i));
+                }
+                r.setText(sb.toString());
+                r.setFontSize(10);
+                r.setFontFamily("微软雅黑");
+            }
+
+            // 自我评价
+            String evaluation = content.getString("evaluation");
+            if (isNotEmpty(evaluation)) {
+                addSectionTitle(doc, "自我评价");
+                XWPFParagraph p = doc.createParagraph();
+                XWPFRun r = p.createRun();
+                r.setText(evaluation);
+                r.setFontSize(10);
+                r.setFontFamily("微软雅黑");
+            }
+
+            // 输出文件
+            response.setContentType("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+            response.setHeader("Content-Disposition", "attachment; filename=resume.docx");
+            doc.write(response.getOutputStream());
+        }
+    }
+
+    /** 添加章节标题 */
+    private void addSectionTitle(XWPFDocument doc, String title) {
+        XWPFParagraph p = doc.createParagraph();
+        XWPFRun r = p.createRun();
+        r.setText(title);
+        r.setBold(true);
+        r.setFontSize(12);
+        r.setFontFamily("微软雅黑");
+        r.setColor("1a1a1a");
+    }
+
+    /** 拼接时间段 */
+    private String buildPeriod(String start, String end) {
+        StringBuilder sb = new StringBuilder();
+        if (isNotEmpty(start)) sb.append(start);
+        if (isNotEmpty(end)) {
+            if (sb.length() > 0) sb.append(" - ");
+            sb.append(end);
+        }
+        return sb.toString();
+    }
+
     /** 构建 Gotenberg multipart 请求体 */
     private byte[] buildGotenbergBody(String html, String boundary) throws Exception {
         String nl = "\r\n";
@@ -789,6 +1000,94 @@ public class ResumeController extends BaseController {
     }
 
     /**
+     * 校验AI解析结果的关键字段，缺失时重试一次
+     */
+    private void validateAndReAsk(String originalText, JSONObject result) {
+        JSONObject baseInfo = result.getJSONObject("baseInfo");
+        JSONArray education = result.getJSONArray("education");
+        JSONArray skills = result.getJSONArray("skills");
+
+        List<String> missingLabels = new ArrayList<>();
+        if (baseInfo == null || !isNotEmpty(baseInfo.getString("name"))) missingLabels.add("姓名");
+        if (baseInfo == null || !isNotEmpty(baseInfo.getString("phone"))) missingLabels.add("手机号");
+        if (baseInfo == null || !isNotEmpty(baseInfo.getString("email"))) missingLabels.add("邮箱");
+        if (education == null || education.isEmpty()) missingLabels.add("教育经历");
+        if (skills == null || skills.isEmpty()) missingLabels.add("技能");
+
+        if (missingLabels.isEmpty()) {
+            return;
+        }
+
+        log.info("AI解析缺失字段({}), 进行重试: {}", missingLabels.size(), String.join(", ", missingLabels));
+
+        StringBuilder reAskPrompt = new StringBuilder();
+        reAskPrompt.append("简历解析补充。以下字段在之前未提取到，请根据原始文本补充。\n");
+        reAskPrompt.append("缺失: ").append(String.join(", ", missingLabels)).append("\n\n");
+        reAskPrompt.append("原始文本:\n").append(originalText).append("\n\n");
+        reAskPrompt.append("输出完整JSON，字段结构同前。未缺失字段保持原样。不要markdown。");
+
+        JSONArray messages = buildMessages(PARSE_SYSTEM_PROMPT, reAskPrompt.toString());
+        try {
+            String response = deepSeekService.callDeepSeek(messages);
+            String json = extractJson(response);
+            JSONObject reAskParsed = JSON.parseObject(json);
+            mergeReAskResult(result, reAskParsed);
+            log.info("重试解析合并完成");
+        } catch (Exception e) {
+            log.warn("重试解析失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 合并重试解析结果（仅覆盖空缺字段）
+     */
+    private void mergeReAskResult(JSONObject target, JSONObject patch) {
+        if (patch == null) return;
+
+        // baseInfo: 逐字段填补空缺
+        JSONObject targetBase = target.getJSONObject("baseInfo");
+        JSONObject patchBase = patch.getJSONObject("baseInfo");
+        if (targetBase != null && patchBase != null) {
+            for (String key : patchBase.keySet()) {
+                if (!isNotEmpty(targetBase.getString(key))) {
+                    targetBase.put(key, patchBase.getString(key));
+                }
+            }
+        }
+
+        // intention: 逐字段填补
+        JSONObject targetInt = target.getJSONObject("intention");
+        JSONObject patchInt = patch.getJSONObject("intention");
+        if (targetInt != null && patchInt != null) {
+            for (String key : patchInt.keySet()) {
+                if (!isNotEmpty(targetInt.getString(key))) {
+                    targetInt.put(key, patchInt.getString(key));
+                }
+            }
+        }
+
+        // 数组字段：target 为空时才用 patch 的
+        String[] arrayKeys = {"education", "experience", "projects", "skills"};
+        for (String key : arrayKeys) {
+            JSONArray targetArr = target.getJSONArray(key);
+            if (targetArr == null || targetArr.isEmpty()) {
+                JSONArray patchArr = patch.getJSONArray(key);
+                if (patchArr != null && !patchArr.isEmpty()) {
+                    target.put(key, patchArr);
+                }
+            }
+        }
+
+        // evaluation: target 为空时使用 patch
+        if (!isNotEmpty(target.getString("evaluation"))) {
+            String patchEval = patch.getString("evaluation");
+            if (isNotEmpty(patchEval)) {
+                target.put("evaluation", patchEval);
+            }
+        }
+    }
+
+    /**
      * 解析上传的简历文件（支持 txt / md / docx / pdf）
      * 通过 AI 提取结构化字段并返回
      */
@@ -877,6 +1176,9 @@ public class ResumeController extends BaseController {
             result.put("skills", parsed.getJSONArray("skills") != null ? parsed.getJSONArray("skills") : new JSONArray());
             result.put("evaluation", parsed.containsKey("evaluation") ? parsed.getString("evaluation") : "");
 
+            // 5. 校验关键字段，缺失则重试一次
+            validateAndReAsk(text, result);
+
             log.info("简历解析成功: file={}, name={}", originalName, defaultBaseInfo.getString("name"));
 
             // 写入缓存
@@ -916,8 +1218,8 @@ public class ResumeController extends BaseController {
                 }
             case "pdf":
                 try (PDDocument doc = PDDocument.load(file.getInputStream())) {
-                    PDFTextStripper stripper = new PDFTextStripper();
-                    return stripper.getText(doc);
+                    CoordinateTextStripper stripper = new CoordinateTextStripper();
+                    return stripper.getReconstructedText(doc);
                 }
             default:
                 return null;

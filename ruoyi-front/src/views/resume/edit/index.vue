@@ -20,6 +20,12 @@
         </el-select>
       </div>
       <div class="toolbar-right">
+        <div class="completion-indicator" :title="completionHint">
+          <el-progress type="circle" :percentage="completionPercent" :width="28" :stroke-width="3" />
+        </div>
+        <div v-if="!onePageOk" class="page-warn" title="内容超过一页 A4，建议精简">
+          <el-icon color="#e6a23c"><WarningFilled /></el-icon>
+        </div>
         <span v-if="resumeStore.saving" class="save-status">保存中...</span>
         <span v-else-if="resumeStore.lastSaved" class="save-status">已保存</span>
         <el-button size="small" @click="triggerImport" :loading="importing" :disabled="importing">
@@ -38,7 +44,7 @@
           JD 适配
         </el-button>
         <el-button type="primary" size="small" @click="handleExport">
-          导出PDF
+          导出 PDF/Word
         </el-button>
       </div>
     </div>
@@ -89,6 +95,31 @@
 
     <!-- 撤回面板 -->
     <UndoPanel />
+
+    <!-- 导入遮罩 -->
+    <div v-if="importStep || importError" class="import-overlay">
+      <div class="import-overlay-inner">
+        <template v-if="importStep && !importError">
+          <div class="import-spinner">
+            <el-icon :size="48" class="spinner-icon"><Loading /></el-icon>
+          </div>
+          <p class="import-step-text">{{ importStep }}</p>
+          <div class="import-progress-bar">
+            <div class="import-progress-fill" :class="{ wide: importStep.includes('解析'), full: importStep.includes('完成') }" />
+          </div>
+        </template>
+        <template v-else-if="importError">
+          <div class="import-error-icon">
+            <el-icon :size="48" color="#f56c6c"><Close /></el-icon>
+          </div>
+          <p class="import-error-text">{{ importError }}</p>
+          <div class="import-error-actions">
+            <el-button type="primary" @click="retryImport">重试</el-button>
+            <el-button @click="importError = ''; importing = false; importStep = ''">取消</el-button>
+          </div>
+        </template>
+      </div>
+    </div>
 
     <!-- AI 诊断弹窗 -->
     <el-dialog v-model="showClinicDialog" title="AI 简历诊断" width="620px" :close-on-click-modal="false" destroy-on-close>
@@ -189,9 +220,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, Upload, Document, Loading, WarningFilled, MagicStick, EditPen, CircleCheck, Operation, View, Promotion } from '@element-plus/icons-vue'
+import { ArrowLeft, Upload, Document, Loading, WarningFilled, MagicStick, EditPen, CircleCheck, Close, Operation, View, Promotion } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { parseResumeFile, aiResumeAction } from '@/api/resume'
 import { getProfile } from '@/api/profile'
@@ -211,6 +242,8 @@ const showExportModal = ref(false)
 const importing = ref(false)
 const importInputRef = ref<HTMLElement | null>(null)
 const showSidebar = ref(false)
+const importStep = ref('')
+const importError = ref('')
 
 // AI 面板（右侧切换）
 const previewTab = ref('preview')
@@ -244,6 +277,55 @@ const handleKeydown = (e: KeyboardEvent) => {
   }
 }
 
+// 简历完成度计算
+const completionPercent = computed(() => {
+  const c = resumeStore.content
+  let score = 0
+  const total = 12
+  if (c.baseInfo.name) score++
+  if (c.baseInfo.phone) score++
+  if (c.baseInfo.email) score++
+  if (c.intention.position) score++
+  if (c.education.some(e => e.school && e.major)) score++
+  if (c.experience.some(e => e.company && e.desc)) score++
+  if (c.campus.some(e => e.organization && e.desc)) score++
+  if (c.projects.some(e => e.name && e.desc)) score++
+  if (c.awards.length) score++
+  if (c.certificates.length) score++
+  if (c.skills.length >= 3) score++
+  if (c.evaluation) score++
+  return Math.round((score / total) * 100)
+})
+
+const completionHint = computed(() => {
+  const hints: string[] = []
+  const c = resumeStore.content
+  if (!c.baseInfo.name || !c.baseInfo.phone || !c.baseInfo.email) hints.push('基本信息')
+  if (!c.intention.position) hints.push('求职意向')
+  if (!c.education.some(e => e.school && e.major)) hints.push('教育经历')
+  if (!c.experience.some(e => e.company && e.desc) && !c.campus.some(e => e.organization && e.desc) && !c.projects.some(e => e.name && e.desc)) hints.push('经历/项目')
+  if (c.skills.length < 3) hints.push('技能')
+  if (!c.evaluation) hints.push('自我评价')
+  return `完成度 ${completionPercent.value}%` + (hints.length ? ` · 建议补充 ${hints.join('、')}` : '')
+})
+
+// 一页检测
+const onePageOk = ref(true)
+
+function checkPageOverflow() {
+  nextTick(() => {
+    const el = document.getElementById('resume-preview')
+    if (el) {
+      const a4Height = 297 // mm
+      // Convert mm to px (1mm ≈ 3.78px at 96dpi)
+      const thresholdPx = a4Height * 3.78
+      onePageOk.value = el.scrollHeight <= thresholdPx + 5 // 5px tolerance
+    }
+  })
+}
+
+watch(() => resumeStore.content, () => checkPageOverflow(), { deep: true })
+
 onMounted(async () => {
   const id = route.params.id as string
   if (id && id !== 'new') {
@@ -255,6 +337,7 @@ onMounted(async () => {
   if (route.query.export === 'true') {
     setTimeout(() => handleExport(), 800)
   }
+  setTimeout(() => checkPageOverflow(), 500)
   window.addEventListener('keydown', handleKeydown)
 })
 
@@ -302,11 +385,13 @@ async function prefillFromProfile() {
     if (profile.school || profile.major) {
       content.education = [{
         school: profile.school || '',
+        schoolId: null,
         major: profile.major || '',
         degree: profile.education || '',
         start: '',
         end: profile.graduationYear || '',
-        gpa: ''
+        gpa: '',
+        courses: []
       }]
     }
 
@@ -329,6 +414,9 @@ const onImportFile = async (e: Event) => {
   const file = target.files?.[0]
   if (!file) return
 
+  importStep.value = '确认导入...'
+  importError.value = ''
+
   try {
     await ElMessageBox.confirm(
       '导入将覆盖当前编辑内容，确认继续？',
@@ -337,25 +425,77 @@ const onImportFile = async (e: Event) => {
     )
   } catch {
     target.value = ''
+    importStep.value = ''
     return
   }
 
   importing.value = true
+  importStep.value = '正在读取文件...'
+  importError.value = ''
+
   try {
+    // Small delay so the overlay renders before the potentially slow parse
+    await new Promise(r => setTimeout(r, 100))
+
+    importStep.value = '正在解析内容...'
     const res = await parseResumeFile(file) as any
     const data = res.data || res
+
+    importStep.value = '正在填充简历...'
+    await new Promise(r => setTimeout(r, 200))
+
     if (data && data.baseInfo) {
       Object.assign(resumeStore.content, data)
+      importStep.value = '导入完成 ✓'
+      await new Promise(r => setTimeout(r, 800))
       ElMessage.success('导入成功，请检查并补充信息')
     } else {
-      ElMessage.error('解析结果异常，请重试')
+      importError.value = '解析结果异常，请重试'
     }
   } catch (err: any) {
     console.error('导入简历失败:', err)
-    ElMessage.error('导入失败：' + (err.message || '未知错误'))
+    importError.value = err.message || '导入失败，请重试'
   } finally {
-    importing.value = false
+    if (!importError.value) {
+      importing.value = false
+      importStep.value = ''
+    }
     target.value = ''
+  }
+}
+
+async function retryImport() {
+  importError.value = ''
+  importStep.value = '正在解析内容...'
+  importing.value = true
+  try {
+    const input = importInputRef.value as HTMLInputElement
+    const file = input?.files?.[0]
+    if (!file) { importError.value = '请重新选择文件'; return }
+
+    const res = await parseResumeFile(file) as any
+    const data = res.data || res
+
+    importStep.value = '正在填充简历...'
+    await new Promise(r => setTimeout(r, 200))
+
+    if (data && data.baseInfo) {
+      Object.assign(resumeStore.content, data)
+      importStep.value = '导入完成 ✓'
+      await new Promise(r => setTimeout(r, 800))
+      ElMessage.success('导入成功，请检查并补充信息')
+      importing.value = false
+      importStep.value = ''
+    } else {
+      importError.value = '解析结果异常，请重试'
+    }
+  } catch (err: any) {
+    importError.value = err.message || '导入失败，请重试'
+  } finally {
+    if (!importError.value) {
+      importing.value = false
+      importStep.value = ''
+    }
   }
 }
 
@@ -523,6 +663,18 @@ function closeJdDialog() {
   color: #999;
 }
 
+.completion-indicator {
+  display: flex;
+  align-items: center;
+  cursor: help;
+}
+
+.page-warn {
+  display: flex;
+  align-items: center;
+  cursor: help;
+}
+
 .editor-body {
   flex: 1;
   display: flex;
@@ -591,6 +743,114 @@ function closeJdDialog() {
   .preview-wrapper {
     display: none;
   }
+}
+
+/* ── 导入遮罩 ── */
+.import-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  animation: overlayFadeIn 0.25s ease;
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.import-overlay-inner {
+  background: #fff;
+  border-radius: 16px;
+  padding: 48px 56px;
+  text-align: center;
+  min-width: 320px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: overlayContentIn 0.3s ease;
+}
+
+@keyframes overlayContentIn {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.import-spinner {
+  margin-bottom: 16px;
+}
+
+.spinner-icon {
+  animation: importSpin 1s linear infinite;
+  color: #409eff;
+}
+
+@keyframes importSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.import-step-text {
+  font-size: 15px;
+  color: #333;
+  margin: 0 0 16px;
+  font-weight: 500;
+}
+
+.import-progress-bar {
+  width: 200px;
+  height: 4px;
+  background: #e8e8e8;
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 0 auto;
+}
+
+.import-progress-fill {
+  height: 100%;
+  width: 20%;
+  background: linear-gradient(90deg, #409eff, #66b1ff);
+  border-radius: 2px;
+  transition: width 0.6s ease;
+  animation: progressIndeterminate 1.5s ease-in-out infinite;
+}
+
+.import-progress-fill.wide {
+  width: 60%;
+}
+
+.import-progress-fill.full {
+  width: 100%;
+  animation: none;
+  background: linear-gradient(90deg, #67c23a, #85ce61);
+}
+
+@keyframes progressIndeterminate {
+  0% { width: 15%; }
+  50% { width: 55%; }
+  100% { width: 15%; }
+}
+
+.import-error-icon {
+  margin-bottom: 12px;
+}
+
+.import-error-text {
+  font-size: 15px;
+  color: #f56c6c;
+  margin: 0 0 20px;
+  font-weight: 500;
+}
+
+.import-error-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
 }
 
 </style>

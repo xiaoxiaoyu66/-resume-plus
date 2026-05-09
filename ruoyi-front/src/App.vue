@@ -55,14 +55,6 @@
           </div>
         </div>
 
-        <router-link to="/profile" :class="{ active: $route.path === '/profile' }" class="nav-item">
-          <div class="nav-icon">
-            <el-icon><User /></el-icon>
-          </div>
-          <span class="nav-label">实习档案</span>
-          <div class="nav-ink"></div>
-        </router-link>
-
         <router-link to="/resume" :class="{ active: $route.path.startsWith('/resume') }" class="nav-item">
           <div class="nav-icon">
             <el-icon><Document /></el-icon>
@@ -160,7 +152,7 @@
 <script setup>
 import { computed, ref, onMounted, watch, provide } from 'vue'
 import {
-  ChatDotRound, ChatLineRound, User, UserFilled, Document,
+  ChatDotRound, ChatLineRound, UserFilled, Document,
   ArrowRight, SwitchButton, Close, FolderOpened, Briefcase
 } from '@element-plus/icons-vue'
 import { useRoute, useRouter } from 'vue-router'

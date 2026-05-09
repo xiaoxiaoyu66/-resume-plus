@@ -46,6 +46,9 @@
         <div v-if="edu.gpa" class="edu-gpa">
           GPA：<EditableText :model-value="edu.gpa" @update:model-value="v => set('education.' + i + '.gpa', v)" />
         </div>
+        <div v-if="edu.courses?.length" class="edu-courses">
+          主修课程：{{ edu.courses.join('、') }}
+        </div>
       </div>
     </section>
 
@@ -70,6 +73,38 @@
           <EditableText class="exp-time" :model-value="proj.start + ' – ' + proj.end" @update:model-value="v => { const parts = v.split(' – '); set('projects.' + i + '.start', parts[0] || ''); set('projects.' + i + '.end', parts[1] || '') }" />
         </div>
         <EditableText class="exp-desc" :model-value="proj.desc" :multiline="true" :placeholder="'描述项目内容...'" @update:model-value="v => set('projects.' + i + '.desc', v)" />
+      </div>
+    </section>
+
+    <!-- 校园经历 -->
+    <section v-if="visibility.campus !== false && content.campus?.length" class="section" :style="{ order: moduleOrder.indexOf('campus') }">
+      <h3 class="sec-title">校园经历</h3>
+      <div v-for="(item, i) in content.campus" :key="i" class="exp-block">
+        <div class="exp-header">
+          <EditableText class="exp-company" :model-value="item.organization" @update:model-value="v => set('campus.' + i + '.organization', v)" />
+          <EditableText class="exp-position" :model-value="item.position" @update:model-value="v => set('campus.' + i + '.position', v)" />
+          <EditableText class="exp-time" :model-value="item.start + ' – ' + item.end" @update:model-value="v => { const parts = v.split(' – '); set('campus.' + i + '.start', parts[0] || ''); set('campus.' + i + '.end', parts[1] || '') }" />
+        </div>
+        <EditableText class="exp-desc" :model-value="item.desc" :multiline="true" :placeholder="'描述活动内容...'" @update:model-value="v => set('campus.' + i + '.desc', v)" />
+      </div>
+    </section>
+
+    <!-- 荣誉奖项 -->
+    <section v-if="visibility.awards !== false && content.awards?.length" class="section" :style="{ order: moduleOrder.indexOf('awards') }">
+      <h3 class="sec-title">荣誉奖项</h3>
+      <div v-for="(award, i) in content.awards" :key="i" class="award-row">
+        <span class="award-name"><EditableText :model-value="award.name" @update:model-value="v => set('awards.' + i + '.name', v)" /></span>
+        <span v-if="award.level" class="award-level"><EditableText :model-value="award.level" @update:model-value="v => set('awards.' + i + '.level', v)" /></span>
+        <span v-if="award.date" class="award-date"><EditableText :model-value="award.date" @update:model-value="v => set('awards.' + i + '.date', v)" /></span>
+      </div>
+    </section>
+
+    <!-- 证书 -->
+    <section v-if="visibility.certificates !== false && content.certificates?.length" class="section" :style="{ order: moduleOrder.indexOf('certificates') }">
+      <h3 class="sec-title">证书</h3>
+      <div v-for="(cert, i) in content.certificates" :key="i" class="award-row">
+        <span class="award-name"><EditableText :model-value="cert.name" @update:model-value="v => set('certificates.' + i + '.name', v)" /></span>
+        <span v-if="cert.date" class="award-date"><EditableText :model-value="cert.date" @update:model-value="v => set('certificates.' + i + '.date', v)" /></span>
       </div>
     </section>
 
@@ -295,5 +330,49 @@ function set(path: string, value: any) {
   color: #555;
   white-space: pre-wrap;
   display: block;
+}
+
+.edu-courses {
+  width: 100%;
+  font-size: 10.5px;
+  color: #888;
+  margin-top: 1px;
+}
+
+.award-row {
+  padding: 4px 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 11.5px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.award-row:last-child {
+  border-bottom: none;
+}
+
+.award-name {
+  font-weight: 500;
+  color: #444;
+  flex: 1;
+  min-width: 0;
+}
+
+.award-level {
+  font-size: 10px;
+  color: #888;
+  background: #f5f5f5;
+  padding: 1px 7px;
+  border-radius: 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.award-date {
+  font-size: 10.5px;
+  color: #aaa;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 </style>

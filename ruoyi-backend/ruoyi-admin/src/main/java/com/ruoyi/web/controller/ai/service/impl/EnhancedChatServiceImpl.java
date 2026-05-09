@@ -223,9 +223,12 @@ public class EnhancedChatServiceImpl implements IChatService {
             effectiveResumeContext = buildResumeContext(session.getResumeId());
         }
         if (effectiveResumeContext != null && !effectiveResumeContext.isEmpty()) {
-            if ("interview".equals(effectiveScene)) {
+            if ("interview-hr".equals(effectiveScene)) {
                 systemPrompt = systemPrompt + "\n\n## 用户简历信息\n" + effectiveResumeContext
-                        + "\n\n先根据以上简历信息出题，等用户回答后再给出点评。用户未指定岗位时主动询问。";
+                        + "\n\n根据以上简历信息进行HR行为面试。关注求职动机、稳定性、职业规划、软素质。";
+            } else if ("interview-pro".equals(effectiveScene)) {
+                systemPrompt = systemPrompt + "\n\n## 用户简历信息\n" + effectiveResumeContext
+                        + "\n\n根据以上简历信息进行专业面试。注意用户的期望岗位决定出题方向。";
             } else if ("resume".equals(effectiveScene)) {
                 systemPrompt = systemPrompt + "\n\n## 用户简历信息\n" + effectiveResumeContext
                         + "\n\n请基于上述简历信息进行诊断分析，从排版、内容、技能匹配度等维度给出评分和改进建议。";

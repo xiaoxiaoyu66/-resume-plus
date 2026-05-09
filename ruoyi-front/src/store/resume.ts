@@ -7,27 +7,19 @@ import type {
   ModuleVisibility,
   ResumeSnapshot
 } from '@/types/resume'
+import { DEFAULT_MODULE_ORDER, DEFAULT_MODULE_VISIBILITY } from '@/types/resume'
 
 const defaultContent: ResumeContent = {
   baseInfo: { name: '', phone: '', email: '', avatar: '', gender: '', birth: '', city: '' },
   intention: { position: '', city: '', salary: '', entryTime: '' },
   education: [],
   experience: [],
+  campus: [],
   projects: [],
+  awards: [],
+  certificates: [],
   skills: [],
   evaluation: ''
-}
-
-const defaultModuleOrder: ModuleKey[] = ['baseInfo', 'intention', 'education', 'experience', 'projects', 'skills', 'evaluation']
-
-const defaultModuleVisibility: ModuleVisibility = {
-  baseInfo: true,
-  intention: true,
-  education: true,
-  experience: true,
-  projects: false,
-  skills: true,
-  evaluation: false
 }
 
 const defaultStyle: ResumeStyle = {
@@ -60,8 +52,8 @@ export const useResumeStore = defineStore('resume', {
     templateId: 'modern',
     title: '我的简历',
     content: JSON.parse(JSON.stringify(defaultContent)),
-    moduleVisibility: { ...defaultModuleVisibility },
-    moduleOrder: [...defaultModuleOrder],
+    moduleVisibility: { ...DEFAULT_MODULE_VISIBILITY },
+    moduleOrder: [...DEFAULT_MODULE_ORDER],
     style: { ...defaultStyle },
     saving: false,
     lastSaved: null,
@@ -126,8 +118,8 @@ export const useResumeStore = defineStore('resume', {
       this.templateId = 'modern'
       this.title = '我的简历'
       this.content = JSON.parse(JSON.stringify(defaultContent))
-      this.moduleOrder = [...defaultModuleOrder]
-      this.moduleVisibility = { ...defaultModuleVisibility }
+      this.moduleOrder = [...DEFAULT_MODULE_ORDER]
+      this.moduleVisibility = { ...DEFAULT_MODULE_VISIBILITY }
       this.style = { ...defaultStyle }
     },
 
@@ -142,7 +134,14 @@ export const useResumeStore = defineStore('resume', {
           const parsed = typeof data.content === 'string' ? JSON.parse(data.content) : data.content
           const savedOrder = parsed._moduleOrder
           if (Array.isArray(savedOrder)) {
-            this.moduleOrder = savedOrder
+            // Merge any new modules not in the saved order
+            const merged = [...savedOrder]
+            for (const key of DEFAULT_MODULE_ORDER) {
+              if (!merged.includes(key)) {
+                merged.push(key)
+              }
+            }
+            this.moduleOrder = merged
           }
           const savedStyle = parsed._style
           if (savedStyle) {
@@ -151,6 +150,15 @@ export const useResumeStore = defineStore('resume', {
           delete parsed._moduleOrder
           delete parsed._style
           this.content = { ...defaultContent, ...parsed }
+          // Ensure new array fields exist on old resumes
+          if (!Array.isArray(this.content.campus)) this.content.campus = []
+          if (!Array.isArray(this.content.awards)) this.content.awards = []
+          if (!Array.isArray(this.content.certificates)) this.content.certificates = []
+          if (this.content.education) {
+            this.content.education.forEach(e => {
+              if (!Array.isArray(e.courses)) e.courses = []
+            })
+          }
         }
         this.undoStack = []
         this.redoStack = []
@@ -190,10 +198,13 @@ export const useResumeStore = defineStore('resume', {
 
     addArrayEntry(module: string) {
       this.captureUndo(true)
-      const templates: Record<string, Record<string, string>> = {
-        education: { school: '', major: '', degree: '', start: '', end: '', gpa: '' },
+      const templates: Record<string, Record<string, any>> = {
+        education: { school: '', schoolId: null, major: '', degree: '', start: '', end: '', gpa: '', courses: [] },
         experience: { company: '', position: '', start: '', end: '', desc: '' },
-        projects: { name: '', role: '', start: '', end: '', desc: '' }
+        campus: { organization: '', position: '', start: '', end: '', desc: '' },
+        projects: { name: '', role: '', start: '', end: '', desc: '' },
+        awards: { name: '', date: '', level: '' },
+        certificates: { name: '', date: '' }
       }
       if (templates[module] && Array.isArray(this.content[module as keyof ResumeContent])) {
         ;(this.content[module as keyof ResumeContent] as unknown[]).push(JSON.parse(JSON.stringify(templates[module])))

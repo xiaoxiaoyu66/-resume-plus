@@ -28,7 +28,7 @@ public interface IChatService {
      * @param sessionId 会话ID（可为null，此时创建新会话）
      * @param message   用户消息
      * @param fileNames 关联的文件名列表（MinIO 路径）
-     * @param scene     场景：default/resume/interview/career
+     * @param scene     场景：default/resume/interview-hr/interview-pro/career
      * @return AI 回复内容
      */
     Map<String, Object> chatWithScene(Long userId, Long sessionId, String message, List<String> fileNames, String scene);

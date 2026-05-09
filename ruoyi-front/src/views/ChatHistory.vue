@@ -227,9 +227,13 @@ watch(() => route.fullPath, () => {
 
 <style scoped lang="scss">
 .chat-history-page {
-  min-height: 100vh;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
   background: #f8f8f6;
   padding: 24px 32px;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .page-header {
@@ -295,8 +299,23 @@ watch(() => route.fullPath, () => {
 }
 
 .history-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   max-width: 800px;
   margin: 0 auto;
+  width: 100%;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #ddd;
+    border-radius: 2px;
+  }
 }
 
 .history-groups {
