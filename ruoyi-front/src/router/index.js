@@ -12,7 +12,8 @@ const routes = [
   {
     path: '/',
     name: 'Home',
-    redirect: '/chat'
+    redirect: '/login',
+    meta: { public: true }
   },
   {
     path: '/chat',

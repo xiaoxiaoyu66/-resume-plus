@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Resume+ 演示视频</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      min-height: 100vh;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+    .container { max-width: 960px; width: 100%; }
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .header h1 {
+      font-size: 32px;
+      font-weight: 700;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+    .header p { color: #aaa; font-size: 16px; }
+    .header p a { color: #667eea; -webkit-text-fill-color: #667eea; text-decoration: none; }
+    .header p a:hover { text-decoration: underline; }
+
+    .video-wrapper {
+      background: rgba(255,255,255,0.05);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 30px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .video-wrapper video {
+      width: 100%;
+      border-radius: 10px;
+      display: block;
+      background: #000;
+    }
+    .video-placeholder {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.03);
+      border: 2px dashed rgba(255,255,255,0.15);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #666;
+      font-size: 15px;
+      gap: 12px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .video-placeholder:hover {
+      border-color: #667eea;
+      background: rgba(102, 126, 234, 0.08);
+    }
+    .video-placeholder .icon {
+      font-size: 48px;
+      opacity: 0.4;
+    }
+    .video-placeholder .hint {
+      font-size: 13px;
+      color: #555;
+    }
+
+    .upload-area {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 30px;
+      border: 1px solid rgba(255,255,255,0.1);
+      margin-bottom: 30px;
+    }
+    .upload-area h3 {
+      font-size: 18px;
+      margin-bottom: 16px;
+      font-weight: 600;
+    }
+    .upload-box {
+      border: 2px dashed rgba(255,255,255,0.15);
+      border-radius: 10px;
+      padding: 40px 20px;
+      text-align: center;
+      transition: all 0.3s;
+    }
+    .upload-box.dragover {
+      border-color: #667eea;
+      background: rgba(102, 126, 234, 0.1);
+    }
+    .upload-box input[type="file"] { display: none; }
+    .upload-btn {
+      display: inline-block;
+      padding: 10px 28px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 500;
+      transition: transform 0.2s;
+    }
+    .upload-btn:hover { transform: translateY(-1px); }
+    .upload-btn:active { transform: translateY(0); }
+    .upload-hint {
+      margin-top: 12px;
+      font-size: 13px;
+      color: #777;
+    }
+    .progress-bar {
+      margin-top: 16px;
+      height: 4px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 2px;
+      overflow: hidden;
+      display: none;
+    }
+    .progress-bar .fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      transition: width 0.3s;
+    }
+    .status {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #aaa;
+    }
+    .status.success { color: #4ade80; }
+    .status.error { color: #f87171; }
+
+    .footer {
+      text-align: center;
+      color: #555;
+      font-size: 13px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Resume+ 演示视频</h1>
+      <p><a href="https://he2wa.xin" target="_blank">https://he2wa.xin</a></p>
+    </div>
+
+    <!-- 视频播放区 -->
+    <div class="video-wrapper">
+      <div id="videoPlaceholder" class="video-placeholder" onclick="document.getElementById('fileInput').click()">
+        <div class="icon">&#9654;</div>
+        <div>点击选择演示视频</div>
+        <div class="hint">支持 MP4 / WebM / MOV，最大 200MB</div>
+      </div>
+      <video id="videoPlayer" controls style="display:none"></video>
+    </div>
+
+    <!-- 上传区 -->
+    <div class="upload-area">
+      <h3>上传演示视频</h3>
+      <div class="upload-box" id="uploadBox">
+        <p style="margin-bottom:16px;color:#999;">将视频文件拖拽到这里，或点击下方按钮</p>
+        <input type="file" id="fileInput" accept="video/mp4,video/webm,video/quicktime" />
+        <button class="upload-btn" onclick="document.getElementById('fileInput').click()">选择视频文件</button>
+        <div class="upload-hint">建议横屏 16:9，分辨率 1920×1080，时长 3-5 分钟</div>
+        <div class="progress-bar" id="progressBar"><div class="fill" id="progressFill"></div></div>
+        <div class="status" id="status"></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Resume+ &mdash; AI 中文简历诊断平台 &mdash; 开源免费
+    </div>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const videoPlayer = document.getElementById('videoPlayer');
+    const videoPlaceholder = document.getElementById('videoPlaceholder');
+    const uploadBox = document.getElementById('uploadBox');
+    const progressBar = document.getElementById('progressBar');
+    const progressFill = document.getElementById('progressFill');
+    const status = document.getElementById('status');
+
+    // 拖拽上传
+    uploadBox.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadBox.classList.add('dragover');
+    });
+    uploadBox.addEventListener('dragleave', () => {
+      uploadBox.classList.remove('dragover');
+    });
+    uploadBox.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadBox.classList.remove('dragover');
+      if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length) handleFile(fileInput.files[0]);
+    });
+
+    function handleFile(file) {
+      if (!file.type.startsWith('video/')) {
+        setStatus('请选择视频文件', 'error');
+        return;
+      }
+      if (file.size > 200 * 1024 * 1024) {
+        setStatus('文件超过 200MB 限制', 'error');
+        return;
+      }
+
+      // 预览
+      const url = URL.createObjectURL(file);
+      videoPlayer.src = url;
+      videoPlayer.style.display = 'block';
+      videoPlaceholder.style.display = 'none';
+
+      // 模拟上传进度（实际使用时对接后端上传接口）
+      setStatus('上传中...', '');
+      progressBar.style.display = 'block';
+      let pct = 0;
+      const interval = setInterval(() => {
+        pct += Math.random() * 15;
+        if (pct >= 100) {
+          pct = 100;
+          clearInterval(interval);
+          progressFill.style.width = '100%';
+          setStatus('上传完成！视频已就绪', 'success');
+          setTimeout(() => { progressBar.style.display = 'none'; }, 2000);
+        }
+        progressFill.style.width = pct + '%';
+      }, 300);
+    }
+
+    function setStatus(msg, type) {
+      status.textContent = msg;
+      status.className = 'status' + (type ? ' ' + type : '');
+    }
+  </script>
+</body>
+</html>
