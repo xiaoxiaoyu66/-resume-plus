@@ -51,7 +51,7 @@ const renderedContent = computed(() => {
   if (!props.content) return ''
   // 先解码内容中的 HTML 实体
   const decodedContent = decodeHtmlEntities(props.content)
-  const rawHtml = marked(decodedContent) as string
+  const rawHtml = marked.parse(decodedContent) || ''
   return sanitizeHtml(rawHtml)
 })
 
