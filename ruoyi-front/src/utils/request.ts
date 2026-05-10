@@ -36,16 +36,16 @@ service.interceptors.request.use(
 // 响应拦截器
 service.interceptors.response.use(
   response => {
-    // 二进制流（PDF 下载）直接返回
+    // 二进制流下载（PDF / Word / PNG 等），直接返回 blob
     if (response.config.responseType === 'blob') {
       if (response.status !== 200) {
         return response.data.text().then(text => {
-          return Promise.reject(new Error(text || 'PDF 生成失败'))
+          return Promise.reject(new Error(text || '导出失败'))
         })
       }
-      // 检查响应类型是否为 PDF，防止 auth 拦截等返回 JSON 被误当 PDF 下载
+      // 防止 auth 拦截返回 HTML/JSON 被误当文件下载
       const contentType = (response.headers['content-type'] as string) || ''
-      if (!contentType.includes('application/pdf')) {
+      if (contentType.includes('text/html') || contentType.includes('application/json')) {
         return response.data.text().then(text => {
           return Promise.reject(new Error(text || '响应格式异常'))
         })

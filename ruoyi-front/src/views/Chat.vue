@@ -70,6 +70,10 @@
       <div v-if="loadingHistory" class="loading-history">
         <el-icon class="loading-spin"><Loading /></el-icon>
         <span>加载对话历史...</span>
+        <div v-if="loadingTimedOut" class="loading-timeout">
+          <span>加载时间过长，请检查网络后</span>
+          <el-button size="small" text @click="retryLoadHistory">重试</el-button>
+        </div>
       </div>
       <div v-else-if="!hasStarted" class="empty-state">
       <!-- 简历+ Logo -->
@@ -84,6 +88,7 @@
           <!-- 场景选择器 -->
           <div class="scene-selector">
             <button class="scene-trigger" @click="sceneMenuOpen = !sceneMenuOpen" @blur="closeSceneMenu">
+              <span class="scene-dot" :style="{ background: sceneColors[currentScene] }"></span>
               <span class="scene-label">{{ sceneOptions.find(s => s.value === currentScene)?.label }}</span>
               <span class="scene-arrow">▾</span>
             </button>
@@ -93,7 +98,10 @@
                 :key="s.value"
                 :class="['scene-menu-item', { active: currentScene === s.value }]"
                 @click="switchScene(s.value); sceneMenuOpen = false"
-              >{{ s.label }}</button>
+              >
+                <span class="scene-dot scene-dot-sm" :style="{ background: sceneColors[s.value] }"></span>
+                {{ s.label }}
+              </button>
             </div>
             <span v-if="hasResume" class="resume-pill" title="已关联简历">📄</span>
           </div>
@@ -123,26 +131,34 @@
                 accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx,.md"
                 @change="handleFileSelect"
               />
-              <button 
-                class="action-btn" 
+              <button
+                class="action-btn action-btn-upload"
                 title="添加附件"
                 :disabled="isUploading"
                 @click="triggerFileUpload"
               >
                 <el-icon v-if="isUploading"><Loading /></el-icon>
                 <el-icon v-else><Plus /></el-icon>
+                <span class="upload-btn-text">附件</span>
               </button>
               <span v-if="uploadedFiles.length > 0" class="file-count">{{ uploadedFiles.length }} 个文件</span>
             </div>
             <div class="right-actions">
-              <button 
-                class="send-btn" 
-                :title="isThinking ? '取消回答' : '发送消息'"
-                :disabled="(!userInput.trim() && uploadedFiles.length === 0) && !isThinking"
+              <button
+                v-if="isThinking"
+                class="stop-btn"
+                @click="cancelCurrentReply"
+              >
+                <svg class="stop-icon" viewBox="0 0 16 16" fill="currentColor" width="14" height="14"><rect x="2" y="2" width="12" height="12" rx="2"/></svg>
+                <span>停止生成</span>
+              </button>
+              <button
+                v-else
+                class="send-btn"
+                :disabled="!userInput.trim() && uploadedFiles.length === 0"
                 @click="sendMessage"
               >
-                <el-icon v-if="isThinking"><Close /></el-icon>
-                <el-icon v-else><Promotion /></el-icon>
+                <el-icon><Promotion /></el-icon>
               </button>
             </div>
           </div>
@@ -159,11 +175,15 @@
         <div
           v-for="(msg, index) in messages"
           :key="index"
-          :class="['message-item', msg.role]"
         >
+          <!-- 日期分隔 -->
+          <div v-if="shouldShowDateSeparator(index)" class="date-separator">
+            <span class="date-separator-text">{{ formatDateSeparator(msg) }}</span>
+          </div>
+          <div :class="['message-item', msg.role]">
           <div class="message-avatar">
             <div v-if="msg.role === 'ai'" class="avatar ai-avatar lishizhen-avatar">
-              <span class="avatar-char">历</span>
+              <span class="avatar-char">简</span>
             </div>
             <div v-else class="avatar user-avatar">
               <el-icon><UserFilled /></el-icon>
@@ -181,20 +201,30 @@
             <span class="message-time">{{ msg.time }}</span>
           </div>
         </div>
-        
+        </div>
+
         <!-- 思考中 -->
         <div v-if="isThinking" class="message-item ai thinking">
           <div class="message-avatar">
             <div class="avatar ai-avatar">
-              <span class="avatar-char">历</span>
+              <span class="avatar-char">简</span>
             </div>
           </div>
           <div class="message-content">
             <div class="thinking-bubble">
-              <div class="thinking-dots">
-                <span></span>
-                <span></span>
-                <span></span>
+              <div class="thinking-steps">
+                <div class="thinking-step">
+                  <span class="step-dot active"></span>
+                  <span class="step-label">理解问题</span>
+                </div>
+                <div class="thinking-step">
+                  <span class="step-dot pulse"></span>
+                  <span class="step-label">分析中</span>
+                </div>
+                <div class="thinking-step">
+                  <span class="step-dot"></span>
+                  <span class="step-label">生成回答</span>
+                </div>
               </div>
               <span class="thinking-text">简历+ 思考中...</span>
             </div>
@@ -208,6 +238,7 @@
           <!-- 场景选择器 -->
           <div class="scene-selector">
             <button class="scene-trigger" @click="sceneMenuOpen = !sceneMenuOpen" @blur="closeSceneMenu">
+              <span class="scene-dot" :style="{ background: sceneColors[currentScene] }"></span>
               <span class="scene-label">{{ sceneOptions.find(s => s.value === currentScene)?.label }}</span>
               <span class="scene-arrow">▾</span>
             </button>
@@ -217,7 +248,10 @@
                 :key="s.value"
                 :class="['scene-menu-item', { active: currentScene === s.value }]"
                 @click="switchScene(s.value); sceneMenuOpen = false"
-              >{{ s.label }}</button>
+              >
+                <span class="scene-dot scene-dot-sm" :style="{ background: sceneColors[s.value] }"></span>
+                {{ s.label }}
+              </button>
             </div>
             <span v-if="hasResume" class="resume-pill" title="已关联简历">📄</span>
           </div>
@@ -247,25 +281,33 @@
                 accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx,.md"
                 @change="handleFileSelect"
               />
-              <button 
-                class="action-btn" 
+              <button
+                class="action-btn action-btn-upload"
                 title="添加附件"
                 :disabled="isUploading"
                 @click="triggerFileUploadBottom"
               >
                 <el-icon v-if="isUploading"><Loading /></el-icon>
                 <el-icon v-else><Plus /></el-icon>
+                <span class="upload-btn-text">附件</span>
               </button>
               <span v-if="uploadedFiles.length > 0" class="file-count">{{ uploadedFiles.length }} 个文件</span>
             </div>
-            <button 
-              class="send-btn" 
-              :title="isThinking ? '取消回答' : '发送消息'"
-              :disabled="(!userInput.trim() && uploadedFiles.length === 0) && !isThinking"
+            <button
+              v-if="isThinking"
+              class="stop-btn"
+              @click="cancelCurrentReply"
+            >
+              <el-icon><VideoPause /></el-icon>
+              <span>停止生成</span>
+            </button>
+            <button
+              v-else
+              class="send-btn"
+              :disabled="!userInput.trim() && uploadedFiles.length === 0"
               @click="sendMessage"
             >
-              <el-icon v-if="isThinking"><Close /></el-icon>
-              <el-icon v-else><Promotion /></el-icon>
+              <el-icon><Promotion /></el-icon>
             </button>
           </div>
         </div>
@@ -305,12 +347,21 @@ function closeSceneMenu() {
 }
 
 const sceneOptions = [
-  { label: '💬 综合', value: 'default' },
-  { label: '📄 简历诊断', value: 'resume' },
-  { label: '👥 HR面试', value: 'interview-hr' },
-  { label: '💼 专业面试', value: 'interview-pro' },
-  { label: '🧭 职业规划', value: 'career' },
+  { label: '综合', value: 'default' },
+  { label: '简历诊断', value: 'resume' },
+  { label: 'HR面试', value: 'interview-hr' },
+  { label: '专业面试', value: 'interview-pro' },
+  { label: '职业规划', value: 'career' },
 ]
+
+const sceneColors: Record<string, string> = {
+  default: '#3b82f6',
+  resume: '#10b981',
+  'interview-hr': '#8b5cf6',
+  'interview-pro': '#f59e0b',
+  career: '#ec4899',
+}
+
 const currentScene = ref('default')
 
 function switchScene(scene: string) {
@@ -324,6 +375,48 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const fileInputBottom = ref<HTMLInputElement | null>(null)
 const uploadedFiles = ref<UploadedFile[]>([])
 const isUploading = ref(false)
+
+// 加载超时检测
+const loadingTimedOut = ref(false)
+let loadingTimer: ReturnType<typeof setTimeout> | null = null
+
+function startLoadingTimer() {
+  loadingTimedOut.value = false
+  loadingTimer = setTimeout(() => {
+    loadingTimedOut.value = true
+  }, 15000) // 15秒超时
+}
+
+function clearLoadingTimer() {
+  if (loadingTimer) {
+    clearTimeout(loadingTimer)
+    loadingTimer = null
+  }
+  loadingTimedOut.value = false
+}
+
+// 检测是否需要显示日期分隔
+function shouldShowDateSeparator(index: number): boolean {
+  if (index === 0) return true
+  const prev = messages.value[index - 1]
+  const curr = messages.value[index]
+  if (!prev || !curr) return false
+  const prevDate = new Date(prev.time || 0)
+  const currDate = new Date(curr.time || 0)
+  return prevDate.toDateString() !== currDate.toDateString()
+}
+
+function formatDateSeparator(msg: ChatMessage): string {
+  const d = new Date(msg.time || 0)
+  const now = new Date()
+  const yesterday = new Date(now)
+  yesterday.setDate(yesterday.getDate() - 1)
+
+  if (d.toDateString() === now.toDateString()) return '今天'
+  if (d.toDateString() === yesterday.toDateString()) return '昨天'
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}年${pad(d.getMonth() + 1)}月${pad(d.getDate())}日`
+}
 
 const showChar1 = ref(false)
 const showChar2 = ref(false)
@@ -370,7 +463,7 @@ const {
   isUploading
 })
 
-const { sendMessage, stopSse } = useChatSse({
+const { sendMessage, stopSse, cancelCurrentReply } = useChatSse({
   userInput,
   messages,
   isThinking,
@@ -403,7 +496,8 @@ function sceneLabel(scene: string) {
   const map: Record<string, string> = {
     default: '综合',
     resume: '简历诊断',
-    interview: '面试模拟',
+    'interview-hr': 'HR面试',
+    'interview-pro': '专业面试',
     career: '职业规划',
   }
   return map[scene] || '综合'
@@ -418,14 +512,21 @@ function formatSessionTime(t: string) {
 
 async function fetchSessions() {
   sessionsLoading.value = true
+  startLoadingTimer()
   try {
     const res = await listHistory() as any
     sessions.value = (res.data || res.rows || []) as ChatSessionItem[]
+    clearLoadingTimer()
   } catch (e) {
     console.error('获取会话列表失败', e)
+    clearLoadingTimer()
   } finally {
     sessionsLoading.value = false
   }
+}
+
+function retryLoadHistory() {
+  fetchSessions()
 }
 
 function selectSession(id: number) {
@@ -451,8 +552,8 @@ function startNewChat() {
   resetChat()
   activeSessionId.value = null
   hasResume.value = false
-  // 清除 URL 中的 sessionId，避免 route watch 重新加载旧会话
-  router.replace({ query: { ...route.query, sessionId: undefined } })
+  // 清除所有查询参数，避免残留 scene/sessionId 触发 watch
+  router.replace({ query: {} })
 }
 
 // 同步侧边栏选中状态
@@ -460,13 +561,18 @@ watch(currentSessionId, (newId) => {
   activeSessionId.value = newId ? Number(newId) : null
 })
 
-onMounted(async () => {
-  const sessionId = route.query.sessionId as string | undefined
-  if (sessionId && sessionId !== 'undefined' && sessionId !== '') {
-    await loadSessionHistory(sessionId)
-    hasResume.value = !!sessionStorage.getItem('session_resume_' + sessionId)
-    nextTick(() => scrollToBottomDelayed())
+// 对话历史加载超时检测
+watch(loadingHistory, (loading) => {
+  if (loading) {
+    startLoadingTimer()
+  } else {
+    clearLoadingTimer()
   }
+})
+
+onMounted(async () => {
+  // 处理初始路由参数（sessionId 恢复历史 / scene 启动面试）
+  await handleRouteQuery(route.query)
   fetchSessions()
   startLogoAnimation()
   window.addEventListener('use-file-from-space', handleFileFromSpace)
@@ -477,20 +583,44 @@ onUnmounted(() => {
   window.removeEventListener('use-file-from-space', handleFileFromSpace)
 })
 
-watch(() => route.query.sessionId, async (newId) => {
-  if (newId && newId !== 'undefined' && newId !== '') {
-    resetChat()
-    await loadSessionHistory(newId as string)
-    // 延迟一帧检查 resume 绑定并滚动到底部
-    nextTick(() => {
-      hasResume.value = !!sessionStorage.getItem('session_resume_' + newId)
-      scrollToBottomDelayed()
-    })
-  } else {
-    resetChat()
-    hasResume.value = false
-  }
+// 监听路由变化（组件复用时不会重新 mount，需要 watch 触发）
+watch(() => route.query, async (newQuery) => {
+  await handleRouteQuery(newQuery)
 })
+
+// 路由参数处理锁，防止异步执行期间重复进入
+let _handlingRoute = false
+
+// 集中处理路由参数，避免 onMounted + watch 重复执行
+async function handleRouteQuery(query: Record<string, any>) {
+  if (_handlingRoute) return
+  _handlingRoute = true
+  try {
+    const sessionId = query.sessionId as string | undefined
+    const scene = query.scene as string | undefined
+
+    if (sessionId && sessionId !== 'undefined' && sessionId !== '') {
+      resetChat()
+      await loadSessionHistory(sessionId)
+      nextTick(() => {
+        hasResume.value = !!sessionStorage.getItem('session_resume_' + sessionId)
+        scrollToBottomDelayed()
+      })
+    } else if (scene && ['interview-hr', 'interview-pro'].includes(scene)) {
+      resetChat()
+      uploadedFiles.value = []
+      currentScene.value = scene
+      userInput.value = '请根据我的简历开始面试'
+      await nextTick()
+      await sendMessage()
+    } else {
+      resetChat()
+      hasResume.value = false
+    }
+  } finally {
+    _handlingRoute = false
+  }
+}
 
 function handleEnter(e: KeyboardEvent) {
   if (!e.shiftKey) {
@@ -539,6 +669,52 @@ $accent-red: #8b1a1a;
 
 @keyframes loading-rotate {
   to { transform: rotate(360deg); }
+}
+
+/* ---- 日期分隔 ---- */
+.date-separator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 0 12px;
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 1px;
+    background: rgba(0, 0, 0, 0.06);
+  }
+
+  .date-separator-text {
+    position: relative;
+    z-index: 1;
+    padding: 0 16px;
+    font-size: 12px;
+    color: #bbb;
+    background: $paper-white;
+  }
+}
+
+/* ---- 加载超时提示 ---- */
+.loading-timeout {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 16px;
+  background: rgba(245, 108, 108, 0.06);
+  border: 1px solid rgba(245, 108, 108, 0.15);
+  border-radius: 8px;
+  font-size: 13px;
+  color: #f56c6c;
+
+  .el-button {
+    font-size: 13px;
+  }
 }
 
 /* ---- 空状态 ---- */
@@ -657,8 +833,8 @@ $accent-red: #8b1a1a;
     }
 
     &:hover {
-      border-color: $accent-red;
-      color: $accent-red;
+      border-color: #3b82f6;
+      color: #3b82f6;
     }
   }
 
@@ -676,7 +852,8 @@ $accent-red: #8b1a1a;
     z-index: 10;
 
     .scene-menu-item {
-      display: block;
+      display: flex;
+      align-items: center;
       width: 100%;
       padding: 6px 12px;
       border: none;
@@ -690,12 +867,12 @@ $accent-red: #8b1a1a;
       transition: all 0.15s ease;
 
       &:hover {
-        background: rgba(196, 92, 72, 0.08);
-        color: $accent-red;
+        background: rgba(59, 130, 246, 0.08);
+        color: #3b82f6;
       }
 
       &.active {
-        color: $accent-red;
+        color: #3b82f6;
         font-weight: 600;
       }
     }
@@ -706,6 +883,23 @@ $accent-red: #8b1a1a;
     line-height: 1;
     cursor: default;
     opacity: 0.7;
+  }
+
+  // 场景选择器颜色指示点
+  .scene-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    transition: background 0.2s ease;
+
+    &.scene-dot-sm {
+      width: 8px;
+      height: 8px;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 4px;
+    }
   }
 }
 
@@ -744,8 +938,9 @@ $accent-red: #8b1a1a;
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    padding: 12px 20px 0;
+    padding: 12px 20px 0 120px;
     border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    min-height: 32px;
 
     .file-tag {
       display: flex;
@@ -833,6 +1028,26 @@ $accent-red: #8b1a1a;
       }
     }
 
+    .action-btn-upload {
+      gap: 4px;
+      width: auto;
+      padding: 0 12px;
+      border-color: rgba(59, 130, 246, 0.2);
+      color: #3b82f6;
+      background: rgba(59, 130, 246, 0.04);
+
+      &:hover {
+        border-color: rgba(59, 130, 246, 0.5);
+        color: #2563eb;
+        background: rgba(59, 130, 246, 0.08);
+      }
+
+      .upload-btn-text {
+        font-size: 12px;
+        font-weight: 500;
+      }
+    }
+
     .send-btn {
       width: 40px;
       height: 40px;
@@ -859,6 +1074,32 @@ $accent-red: #8b1a1a;
 
       .el-icon {
         font-size: 18px;
+      }
+    }
+
+    .stop-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 16px;
+      height: 40px;
+      border-radius: 10px;
+      border: none;
+      background: #ef4444;
+      color: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: #dc2626;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+      }
+
+      .stop-icon {
+        flex-shrink: 0;
       }
     }
   }
@@ -931,25 +1172,34 @@ $accent-red: #8b1a1a;
           font-size: 16px;
 
           &.ai-avatar {
-            background: linear-gradient(135deg, $ink-deep 0%, $ink-black 100%);
-            color: $paper-white;
-            font-family: 'Noto Serif SC', 'STSong', serif;
-            font-weight: 600;
-          }
-
-          /* 简历+ 头像样式 */
-          &.lishizhen-avatar {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #0E3265 0%, #0A1E3D 100%);
+            background: linear-gradient(135deg, #2D1B13 0%, #1A0F0A 100%);
             font-family: 'Noto Serif SC', 'STSong', serif;
             font-weight: 700;
+            border: 1.5px solid rgba(212, 165, 116, 0.3);
+            box-shadow: 0 2px 10px rgba(45, 27, 19, 0.35);
+            position: relative;
 
             .avatar-char {
               font-size: 18px;
-              color: #FAF8F5;
+              color: #D4A574;
+              font-weight: 700;
+              position: relative;
+              z-index: 1;
             }
+
+            /* 内圈细线，模拟 logo 的笔触层次 */
+            &::after {
+              content: '';
+              position: absolute;
+              inset: 4px;
+              border-radius: 50%;
+              border: 1px solid rgba(212, 165, 116, 0.12);
+              pointer-events: none;
+            }
+          }
+
+          &.lishizhen-avatar {
+            /* 与 favicon / public/resume-plus-logo.svg 统一风格 */
           }
 
           &.user-avatar {
@@ -983,32 +1233,52 @@ $accent-red: #8b1a1a;
     .thinking {
       .thinking-bubble {
         display: flex;
-        align-items: center;
-        gap: 12px;
+        flex-direction: column;
+        gap: 8px;
         padding: 16px 20px;
         background: $paper-gray;
         border-radius: 16px 16px 16px 4px;
+        min-width: 180px;
 
-        .thinking-dots {
+        .thinking-steps {
           display: flex;
-          gap: 4px;
+          gap: 16px;
 
-          span {
-            width: 8px;
-            height: 8px;
-            background: $ink-pale;
-            border-radius: 50%;
-            animation: thinking-bounce 1.4s infinite ease-in-out;
+          .thinking-step {
+            display: flex;
+            align-items: center;
+            gap: 5px;
 
-            &:nth-child(2) { animation-delay: 0.2s; }
-            &:nth-child(3) { animation-delay: 0.4s; }
+            .step-dot {
+              width: 7px;
+              height: 7px;
+              border-radius: 50%;
+              background: #ddd;
+              transition: all 0.3s ease;
+
+              &.active {
+                background: #3b82f6;
+                box-shadow: 0 0 6px rgba(59, 130, 246, 0.5);
+              }
+
+              &.pulse {
+                background: #3b82f6;
+                animation: step-pulse 1s ease-in-out infinite;
+              }
+            }
+
+            .step-label {
+              font-size: 12px;
+              color: #999;
+            }
           }
         }
 
         .thinking-text {
-          font-size: 14px;
+          font-size: 13px;
           color: $ink-pale;
           font-family: 'Noto Serif SC', 'STSong', serif;
+          margin-left: 1px;
         }
       }
     }
@@ -1017,6 +1287,11 @@ $accent-red: #8b1a1a;
   .bottom-input {
     padding: 20px 0;
   }
+}
+
+@keyframes step-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
 }
 
 @keyframes message-in {
@@ -1030,16 +1305,6 @@ $accent-red: #8b1a1a;
   }
 }
 
-@keyframes thinking-bounce {
-  0%, 80%, 100% {
-    transform: scale(0.6);
-    opacity: 0.5;
-  }
-  40% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
 
 /* ===== 侧边栏布局 ===== */
 .chat-layout {

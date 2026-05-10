@@ -21,7 +21,7 @@ import java.util.List;
 
 /**
  * 文件内容解析服务
- * 从 MinIO 下载文件，解析为纯文本
+ * 从 MinIO 下载文件，解析为纯文本（也支持直接从字节数组解析）
  */
 @Service
 public class FileContentService {
@@ -127,6 +127,51 @@ public class FileContentService {
             }
         }
         return sb.toString();
+    }
+
+    /**
+     * 从字节数组解析文件内容（不依赖 MinIO，直接从 Redis 读取后调用）
+     *
+     * @param fileContent     文件内容字节数组
+     * @param originalFileName 原始文件名（用于判断扩展名）
+     * @return 解析后的纯文本
+     */
+    public String parseBytes(byte[] fileContent, String originalFileName) {
+        String ext = getExtension(originalFileName).toLowerCase();
+        try {
+            String text;
+            try (InputStream in = new java.io.ByteArrayInputStream(fileContent)) {
+                // 检查文件大小
+                if (fileContent.length > MAX_FILE_SIZE_MB * 1024 * 1024) {
+                    return "[文件过大，仅支持解析 " + MAX_FILE_SIZE_MB + "MB 以内的文件]";
+                }
+
+                switch (ext) {
+                    case "pdf":
+                        text = parsePdf(in);
+                        break;
+                    case "docx":
+                        text = parseDocx(in);
+                        break;
+                    case "txt":
+                    case "md":
+                        text = parseText(in);
+                        break;
+                    default:
+                        text = "[不支持解析的文件类型: " + ext + "]";
+                }
+            }
+
+            log.info("字节数组解析完成: {}, 原始长度: {}", originalFileName, text.length());
+
+            if (text.length() > MAX_CHARS_PER_FILE) {
+                text = text.substring(0, MAX_CHARS_PER_FILE) + "\n\n... [内容已截断，仅展示前" + MAX_CHARS_PER_FILE + "字符]";
+            }
+            return text;
+        } catch (Exception e) {
+            log.warn("文件内容解析失败: {} - {}", originalFileName, e.getMessage());
+            return "[解析失败: " + e.getMessage() + "]";
+        }
     }
 
     private String getExtension(String fileName) {

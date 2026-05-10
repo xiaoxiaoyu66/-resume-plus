@@ -65,6 +65,9 @@ public class EnhancedChatServiceImpl implements IChatService {
     private FileContentService fileContentService;
 
     @Resource
+    private TempFileStorageService tempFileStorageService;
+
+    @Resource
     private RedisCache redisCache;
 
     @Resource
@@ -289,14 +292,16 @@ public class EnhancedChatServiceImpl implements IChatService {
     }
 
     /**
-     * 构建完整消息（P0: 始终尝试文档RAG + 文件内容）
+     * 构建完整消息（向量检索 + 文件内容，互不跳过）
+     * 文件优先从 Redis 读取（绕过 MinIO 依赖），不存在时回退 MinIO
      */
     private String buildFullMessage(String message, List<String> fileNames, Long userId) {
-        // P0: 始终尝试向量检索文档内容（不依赖是否有 fileNames）
-        List<VectorService.VectorSearchResult> searchResults = vectorService.searchSimilar(message, userId, 5);
+        StringBuilder contextBuilder = new StringBuilder();
 
+        // P0: 始终尝试向量检索文档内容
+        List<VectorService.VectorSearchResult> searchResults = vectorService.searchSimilar(message, userId, 5);
         if (!searchResults.isEmpty()) {
-            StringBuilder contextBuilder = new StringBuilder(
+            contextBuilder.append(
                     "\n\n请参考以下检索到的相关内容回答用户问题。注意：请基于这些内容回答，但不要复述「相关内容1」之类的标记，直接用自然语言组织回答。如果检索内容与问题无关，忽略并用自己的知识回答。\n");
             for (int i = 0; i < searchResults.size(); i++) {
                 VectorService.VectorSearchResult result = searchResults.get(i);
@@ -304,22 +309,42 @@ public class EnhancedChatServiceImpl implements IChatService {
                         .append(String.format("%.2f", result.getSimilarity())).append(") ---\n")
                         .append(result.getChunkText()).append("\n\n");
             }
+        }
+
+        // 文件内容解析（优先 Redis，再回退 MinIO）
+        if (fileNames != null && !fileNames.isEmpty()) {
+            contextBuilder.append("\n\n用户上传了以下文件，请基于文件内容回答用户的问题。如果文件中找不到相关信息，请如实告知。\n");
+            for (String fileName : fileNames) {
+                // 优先尝试从 Redis 读取（tempFileId）
+                TempFileStorageService.TempFileInfo tempInfo = tempFileStorageService.getTempFileInfo(fileName);
+                if (tempInfo != null) {
+                    byte[] content = tempFileStorageService.getTempFileBytes(fileName);
+                    if (content != null && content.length > 0) {
+                        String parsed = fileContentService.parseBytes(content, tempInfo.getOriginalName());
+                        contextBuilder.append("--- ").append(tempInfo.getOriginalName()).append(" ---\n")
+                                .append(parsed).append("\n");
+                        continue;
+                    }
+                }
+                // 回退 MinIO
+                try {
+                    List<FileContentService.FileContent> contents = fileContentService.parseFiles(List.of(fileName));
+                    for (FileContentService.FileContent fc : contents) {
+                        contextBuilder.append("--- ").append(fc.getFileName()).append(" ---\n")
+                                .append(fc.getContent()).append("\n");
+                    }
+                } catch (Exception e) {
+                    log.warn("MinIO文件解析失败: {} - {}", fileName, e.getMessage());
+                    contextBuilder.append("--- ").append(fileName).append(" ---\n")
+                            .append("[解析失败: ").append(e.getMessage()).append("]\n");
+                }
+            }
+        }
+
+        if (contextBuilder.length() > 0) {
             contextBuilder.append("【用户问题】").append(message);
             return contextBuilder.toString();
         }
-
-        // 如果指定了具体文件，回退到全文解析
-        if (fileNames != null && !fileNames.isEmpty()) {
-            List<FileContentService.FileContent> fileContents = fileContentService.parseFiles(fileNames);
-            StringBuilder filePart = new StringBuilder("\n\n用户上传了以下文件，请基于文件内容回答用户的问题。如果文件中找不到相关信息，请如实告知。\n");
-            for (FileContentService.FileContent fc : fileContents) {
-                filePart.append("--- ").append(fc.getFileName()).append(" ---\n")
-                        .append(fc.getContent()).append("\n");
-            }
-            filePart.append("【用户问题】").append(message);
-            return filePart.toString();
-        }
-
         return message;
     }
 

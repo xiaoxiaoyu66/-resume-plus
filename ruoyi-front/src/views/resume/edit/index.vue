@@ -13,11 +13,30 @@
         <span class="editor-title">简历编辑器</span>
       </div>
       <div class="toolbar-center">
-        <el-select v-model="resumeStore.templateId" size="small" style="width: 120px" @change="onTemplateChange">
-          <el-option label="现代模板" value="modern" />
-          <el-option label="经典模板" value="classic" />
-          <el-option label="极简模板" value="minimal" />
-        </el-select>
+        <div class="template-selector" ref="templatePickerRef">
+          <span class="template-current" @click="showTemplatePicker = !showTemplatePicker">
+            <el-icon><CopyDocument /></el-icon>
+            {{ templateLabel }}
+            <el-icon :class="['chevron', { open: showTemplatePicker }]"><ArrowDown /></el-icon>
+          </span>
+          <Teleport to="body">
+            <div v-if="showTemplatePicker" class="template-picker-dropdown" :style="pickerStyle" @click.stop>
+              <div class="picker-arrow" />
+              <div class="picker-cards">
+                <div
+                  v-for="tpl in templates"
+                  :key="tpl.id"
+                  class="template-card"
+                  :class="{ active: resumeStore.templateId === tpl.id }"
+                  @click.stop="selectTemplate(tpl.id)"
+                >
+                  <div class="template-preview" v-html="tpl.preview"></div>
+                  <div class="template-card-label">{{ tpl.label }}</div>
+                </div>
+              </div>
+            </div>
+          </Teleport>
+        </div>
       </div>
       <div class="toolbar-right">
         <div class="completion-indicator" :title="completionHint">
@@ -26,8 +45,10 @@
         <div v-if="!onePageOk" class="page-warn" title="内容超过一页 A4，建议精简">
           <el-icon color="#e6a23c"><WarningFilled /></el-icon>
         </div>
-        <span v-if="resumeStore.saving" class="save-status">保存中...</span>
-        <span v-else-if="resumeStore.lastSaved" class="save-status">已保存</span>
+        <div class="save-indicator" :class="saveStatusClass" :title="saveStatusTip">
+          <span class="save-dot" />
+          <span class="save-label">{{ saveStatusLabel }}</span>
+        </div>
         <el-button size="small" @click="triggerImport" :loading="importing" :disabled="importing">
           <el-icon><Upload /></el-icon>
           导入简历
@@ -43,7 +64,7 @@
           <el-icon><Document /></el-icon>
           JD 适配
         </el-button>
-        <el-button type="primary" size="small" @click="handleExport">
+        <el-button type="primary" size="small" @click="handleExport" :disabled="showExportModal">
           导出 PDF/Word
         </el-button>
       </div>
@@ -55,9 +76,38 @@
       <ModuleNav v-show="showSidebar" />
 
       <!-- 中间表单编辑区 -->
-      <div v-show="showSidebar" class="edit-form-wrapper">
+      <div v-show="showSidebar" class="edit-form-wrapper" :style="editFormStyle">
+        <!-- empty guide content... -->
+        <div v-if="isEmptyResume" class="empty-guide">
+          <div class="empty-guide-icon">
+            <el-icon :size="40"><Document /></el-icon>
+          </div>
+          <h2 class="empty-guide-title">开始创建你的简历</h2>
+          <p class="empty-guide-desc">填写基本信息、教育经历、工作经验和技能，AI 将辅助优化你的简历内容。</p>
+          <div class="empty-guide-actions">
+            <el-button type="primary" @click="scrollToSection('baseInfo')">填写基本信息</el-button>
+            <el-button @click="scrollToSection('education')">添加教育经历</el-button>
+          </div>
+          <div class="empty-guide-tips">
+            <div class="guide-tip">
+              <span class="tip-icon"><el-icon color="#2563eb"><MagicStick /></el-icon></span>
+              <span>AI 诊断优化你的简历内容</span>
+            </div>
+            <div class="guide-tip">
+              <span class="tip-icon"><el-icon color="#10b981"><EditPen /></el-icon></span>
+              <span>多模板切换，实时预览</span>
+            </div>
+            <div class="guide-tip">
+              <span class="tip-icon"><el-icon color="#e6a23c"><Upload /></el-icon></span>
+              <span>支持导入现有简历文件</span>
+            </div>
+          </div>
+        </div>
         <EditForm />
       </div>
+
+      <!-- 可拖拽分隔条 -->
+      <div v-show="showSidebar" class="resize-handle" @mousedown="onResizeStart" />
 
       <!-- 右侧预览区 / AI 面板 -->
       <div class="preview-wrapper" :class="{ 'preview-full': !showSidebar }">
@@ -77,12 +127,19 @@
             <el-icon><MagicStick /></el-icon> AI
           </button>
         </div>
-        <PreviewPane v-show="previewTab === 'preview'" />
+        <PreviewPane
+          v-show="previewTab === 'preview'"
+          :annotations="previewAnnotations"
+          :focused-section="focusedSection"
+          @section-click="onSectionClick"
+        />
         <AIPanel
           v-show="previewTab === 'ai'"
           :clinic-result="clinicResult"
           :clinic-loading="clinicLoading"
+          :active-section="activeSection"
           @re-diagnose="handleClinic"
+          @focus-section="onFocusSection"
         />
       </div>
     </div>
@@ -222,7 +279,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, Upload, Document, Loading, WarningFilled, MagicStick, EditPen, CircleCheck, Close, Operation, View, Promotion } from '@element-plus/icons-vue'
+import { ArrowLeft, Upload, Document, Loading, WarningFilled, MagicStick, EditPen, CircleCheck, Close, Operation, View, Promotion, ArrowDown, CopyDocument } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { parseResumeFile, aiResumeAction } from '@/api/resume'
 import { getProfile } from '@/api/profile'
@@ -258,6 +315,98 @@ function fetchClinicResult() {
 const showClinicDialog = ref(false)
 const clinicLoading = ref(false)
 const clinicResult = ref<any>(null)
+
+// ========== 预览 ↔ AI 交互 ==========
+
+interface Annotation {
+  id: string
+  module: string
+  index?: number
+  type: 'warning' | 'improve' | 'success' | 'ai'
+  message: string
+}
+
+function guessMissingModule(text: string): string | null {
+  const kw: [string, string][] = [
+    ['基本信息', 'baseInfo'], ['姓名', 'baseInfo'], ['电话', 'baseInfo'], ['邮箱', 'baseInfo'],
+    ['教育', 'education'],
+    ['工作', 'experience'], ['经历', 'experience'],
+    ['项目', 'projects'],
+    ['技能', 'skills'],
+    ['评价', 'evaluation'], ['自我', 'evaluation'],
+    ['意向', 'intention'], ['期望', 'intention'],
+    ['奖项', 'awards'], ['荣誉', 'awards'],
+    ['证书', 'certificates'],
+    ['校园', 'campus']
+  ]
+  for (const [keyword, module] of kw) {
+    if (text.includes(keyword)) return module
+  }
+  return null
+}
+
+/** 将诊断结果转换为预览区的标注 */
+const previewAnnotations = computed<Annotation[]>(() => {
+  const result = clinicResult.value
+  if (!result) return []
+  const list: Annotation[] = []
+  const add = (id: string, module: string, type: Annotation['type'], message: string, index?: number) => {
+    list.push({ id, module, type, message, index })
+  }
+
+  // missing → warning badges
+  if (Array.isArray(result.missing)) {
+    for (const item of result.missing) {
+      const mod = guessMissingModule(item)
+      if (mod) {
+        add('miss-' + list.length, mod, 'warning', item)
+      }
+    }
+  }
+
+  // projectTips → improve badges
+  if (Array.isArray(result.projectTips)) {
+    for (const tip of result.projectTips) {
+      add(
+        'tip-' + tip.module + '-' + tip.index,
+        tip.module,
+        'improve',
+        tip.tip,
+        tip.index
+      )
+    }
+  }
+
+  // generated evaluation → ai badge on evaluation section
+  if (result.generated?.evaluation) {
+    add('gen-eval', 'evaluation', 'ai', 'AI 生成了自我评价建议，点击查看')
+  }
+
+  return list
+})
+
+/** 当前在 AIPanel 中被选中的区块（由预览区点击触发） */
+const activeSection = ref<{ module: string; index?: number } | null>(null)
+
+/** 当前在预览区应高亮的区块（由 AIPanel 建议点击触发） */
+const focusedSection = ref<{ module: string; index?: number } | null>(null)
+
+/** 预览区标注被点击 → 切到 AI tab 并高亮相关建议 */
+function onSectionClick(ann: Annotation) {
+  activeSection.value = { module: ann.module, index: ann.index }
+  if (previewTab.value !== 'ai') {
+    previewTab.value = 'ai'
+  }
+}
+
+/** AIPanel 的建议被点击 → 切到预览 tab 并滚动到相关区块 */
+function onFocusSection(payload: { module: string; index?: number }) {
+  focusedSection.value = null // reset first for same-value trigger
+  focusedSection.value = { module: payload.module, index: payload.index }
+  if (previewTab.value !== 'preview') {
+    previewTab.value = 'preview'
+  }
+}
 
 // JD 适配
 const showJdDialog = ref(false)
@@ -309,6 +458,64 @@ const completionHint = computed(() => {
   return `完成度 ${completionPercent.value}%` + (hints.length ? ` · 建议补充 ${hints.join('、')}` : '')
 })
 
+// 保存状态指示器
+const saveStatusClass = computed(() => {
+  if (resumeStore.saving) return 'is-saving'
+  if (resumeStore.dirty) return 'is-dirty'
+  return 'is-saved'
+})
+const saveStatusLabel = computed(() => {
+  if (resumeStore.saving) return '保存中'
+  if (resumeStore.dirty) return '未保存'
+  return '已保存'
+})
+const saveStatusTip = computed(() => {
+  if (resumeStore.saving) return '正在自动保存...'
+  if (resumeStore.dirty) return '有未保存的修改'
+  if (resumeStore.lastSaved) return '上次保存：' + resumeStore.lastSaved.toLocaleTimeString()
+  return ''
+})
+
+// 空状态检测
+const isEmptyResume = computed(() => {
+  const c = resumeStore.content
+  return !c.baseInfo.name && !c.baseInfo.phone && !c.baseInfo.email
+})
+
+// 编辑区/预览区拖拽分隔
+const editFormWidth = ref('')
+const isResizing = ref(false)
+const editFormStyle = computed(() => {
+  if (editFormWidth.value) {
+    return { width: editFormWidth.value, flex: 'none', minWidth: '300px' }
+  }
+  return {}
+})
+function onResizeStart(e: MouseEvent) {
+  isResizing.value = true
+  const startX = e.clientX
+  const startWidth = editFormWidth.value || (document.querySelector('.edit-form-wrapper') as HTMLElement)?.offsetWidth + 'px'
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+  function onMove(ev: MouseEvent) {
+    if (!isResizing.value) return
+    const delta = ev.clientX - startX
+    const currentW = parseInt(startWidth) + delta
+    if (currentW > 300 && currentW < 1200) {
+      editFormWidth.value = currentW + 'px'
+    }
+  }
+  function onUp() {
+    isResizing.value = false
+    document.body.style.cursor = ''
+    document.body.style.userSelect = ''
+    document.removeEventListener('mousemove', onMove)
+    document.removeEventListener('mouseup', onUp)
+  }
+  document.addEventListener('mousemove', onMove)
+  document.addEventListener('mouseup', onUp)
+}
+
 // 一页检测
 const onePageOk = ref(true)
 
@@ -339,14 +546,73 @@ onMounted(async () => {
   }
   setTimeout(() => checkPageOverflow(), 500)
   window.addEventListener('keydown', handleKeydown)
+  document.addEventListener('click', onClickOutsidePicker, true)
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
+  document.removeEventListener('click', onClickOutsidePicker, true)
 })
+
+// 模板预览选择器
+const showTemplatePicker = ref(false)
+const templatePickerRef = ref<HTMLElement | null>(null)
+function onClickOutsidePicker(e: MouseEvent) {
+  if (!showTemplatePicker.value) return
+  const dropdown = document.querySelector('.template-picker-dropdown')
+  if (templatePickerRef.value && !templatePickerRef.value.contains(e.target as Node) &&
+      (!dropdown || !dropdown.contains(e.target as Node))) {
+    showTemplatePicker.value = false
+  }
+}
+const pickerStyle = computed(() => {
+  if (!showTemplatePicker.value) return { display: 'none' }
+  const el = templatePickerRef.value
+  if (!el) return { display: 'none' }
+  const rect = el.getBoundingClientRect()
+  return {
+    position: 'fixed' as const,
+    top: (rect.bottom + 4) + 'px',
+    left: Math.max(8, Math.min(rect.left + rect.width / 2 - 164, window.innerWidth - 336)) + 'px',
+    zIndex: 99999
+  }
+})
+const templateLabel = computed(() => {
+  const labels: Record<string, string> = { modern: '现代模板', classic: '经典模板', minimal: '极简模板' }
+  return labels[resumeStore.templateId] || '选择模板'
+})
+const templates = [
+  {
+    id: 'modern',
+    label: '现代模板',
+    preview: '<svg viewBox="0 0 120 160" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="160" fill="#fff"/><rect x="10" y="10" width="100" height="18" rx="2" fill="#e8f0fe"/><rect x="10" y="34" width="60" height="6" rx="2" fill="#2563eb" opacity=".15"/><rect x="10" y="46" width="100" height="4" rx="1" fill="#e2e8f0"/><rect x="10" y="54" width="80" height="4" rx="1" fill="#e2e8f0"/><rect x="10" y="68" width="40" height="5" rx="1" fill="#2563eb" opacity=".2"/><rect x="10" y="78" width="100" height="4" rx="1" fill="#e2e8f0"/><rect x="10" y="86" width="90" height="4" rx="1" fill="#e2e8f0"/><rect x="10" y="100" width="40" height="5" rx="1" fill="#2563eb" opacity=".2"/><rect x="10" y="110" width="100" height="4" rx="1" fill="#e2e8f0"/><rect x="10" y="118" width="70" height="4" rx="1" fill="#e2e8f0"/></svg>'
+  },
+  {
+    id: 'classic',
+    label: '经典模板',
+    preview: '<svg viewBox="0 0 120 160" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="160" fill="#faf9f8"/><rect x="8" y="8" width="104" height="20" rx="1" fill="#1a1a1a"/><rect x="8" y="34" width="60" height="4" rx="1" fill="#1a1a1a" opacity=".5"/><rect x="8" y="44" width="104" height="3" rx="1" fill="#d4d4d4"/><rect x="8" y="50" width="90" height="3" rx="1" fill="#d4d4d4"/><rect x="8" y="62" width="60" height="4" rx="1" fill="#1a1a1a" opacity=".5"/><rect x="8" y="70" width="104" height="3" rx="1" fill="#d4d4d4"/><rect x="8" y="76" width="85" height="3" rx="1" fill="#d4d4d4"/><rect x="8" y="88" width="60" height="4" rx="1" fill="#1a1a1a" opacity=".5"/><rect x="8" y="96" width="104" height="3" rx="1" fill="#d4d4d4"/><rect x="8" y="102" width="75" height="3" rx="1" fill="#d4d4d4"/></svg>'
+  },
+  {
+    id: 'minimal',
+    label: '极简模板',
+    preview: '<svg viewBox="0 0 120 160" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="160" fill="#fff"/><rect x="10" y="12" width="50" height="6" rx="3" fill="#333"/><rect x="10" y="22" width="70" height="3" rx="1.5" fill="#ccc"/><rect x="10" y="28" width="40" height="3" rx="1.5" fill="#ccc"/><rect x="10" y="42" width="100" height="3" rx="1" fill="#e5e5e5"/><rect x="10" y="50" width="100" height="3" rx="1" fill="#e5e5e5"/><rect x="10" y="64" width="80" height="3" rx="1" fill="#e5e5e5"/><rect x="10" y="72" width="60" height="3" rx="1" fill="#e5e5e5"/><rect x="10" y="86" width="100" height="3" rx="1" fill="#e5e5e5"/><rect x="10" y="94" width="70" height="3" rx="1" fill="#e5e5e5"/></svg>'
+  }
+]
+function selectTemplate(id: string) {
+  resumeStore.setTemplate(id)
+  showTemplatePicker.value = false
+}
 
 const goBack = () => {
   router.push('/resume')
+}
+
+/** Scroll to an edit form section (used by empty guide) */
+function scrollToSection(module: string) {
+  const el = document.getElementById('section-' + module)
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 }
 
 const onTemplateChange = (val: string) => {
@@ -616,15 +882,17 @@ function closeJdDialog() {
   width: 100vw;
   height: 100vh;
   z-index: 1000;
-  background: #f5f5f5;
+  background: #f0f7ff;
   display: flex;
   flex-direction: column;
 }
 
 .editor-toolbar {
-  height: 50px;
-  background: #fff;
-  border-bottom: 1px solid #e0e0e0;
+  height: 52px;
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(37, 99, 235, 0.10);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -639,29 +907,70 @@ function closeJdDialog() {
 }
 
 .editor-title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
-  color: #333;
+  color: #1e40af;
+  letter-spacing: 0.3px;
 }
 
 .sidebar-toggle {
-  color: #999;
+  color: #93c5fd;
   transition: color 0.2s;
 }
 .sidebar-toggle:hover {
-  color: #409eff;
+  color: #2563eb;
 }
 
 .toolbar-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
-.save-status {
-  font-size: 12px;
-  color: #999;
+.save-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.6);
+  border: 1px solid rgba(37, 99, 235, 0.08);
+  transition: all 0.3s ease;
+  cursor: default;
 }
+.save-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+.save-label {
+  color: #64748b;
+}
+/* saved: green dot */
+.save-indicator.is-saved .save-dot {
+  background: #10b981;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+}
+/* saving: blue spinning dot */
+.save-indicator.is-saving .save-dot {
+  background: #2563eb;
+  animation: save-pulse 0.8s ease-in-out infinite alternate;
+}
+@keyframes save-pulse {
+  from { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
+  to { box-shadow: 0 0 0 4px rgba(37, 99, 235, 0); }
+}
+/* dirty: orange dot */
+.save-indicator.is-dirty .save-dot {
+  background: #e6a23c;
+  box-shadow: 0 0 0 0 rgba(230, 162, 60, 0.4);
+  animation: save-pulse 1.2s ease-in-out infinite;
+}
+.save-indicator.is-saving .save-label { color: #2563eb; }
+.save-indicator.is-dirty .save-label { color: #e6a23c; }
+.save-indicator.is-saved .save-label { color: #10b981; }
 
 .completion-indicator {
   display: flex;
@@ -685,9 +994,9 @@ function closeJdDialog() {
   flex: 1;
   min-width: 400px;
   overflow-y: auto;
-  padding: 20px;
-  background: #fff;
-  border-right: 1px solid #e0e0e0;
+  padding: 24px 20px;
+  background: #f0f7ff;
+  border-right: 1px solid rgba(37, 99, 235, 0.08);
 }
 
 .preview-wrapper {
@@ -695,7 +1004,7 @@ function closeJdDialog() {
   flex-shrink: 0;
   overflow-y: auto;
   padding: 20px;
-  background: #e8e8e8;
+  background: #e2e8f0;
   transition: width 0.25s ease;
 }
 
@@ -706,12 +1015,13 @@ function closeJdDialog() {
 
 .preview-tabs {
   display: flex;
-  gap: 0;
+  gap: 4px;
   margin-bottom: 12px;
-  background: #f5f5f5;
-  border-radius: 8px;
-  overflow: hidden;
+  background: rgba(255,255,255,0.5);
+  border-radius: 10px;
+  padding: 3px;
   flex-shrink: 0;
+  border: 1px solid rgba(37, 99, 235, 0.08);
 }
 
 .preview-tab {
@@ -724,19 +1034,186 @@ function closeJdDialog() {
   border: none;
   cursor: pointer;
   font-size: 12px;
-  color: #888;
+  color: #60a5fa;
   background: transparent;
+  border-radius: 7px;
   transition: all 0.2s;
 }
 
 .preview-tab:hover {
-  color: #409eff;
-  background: rgba(64, 158, 255, 0.06);
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.06);
 }
 
 .preview-tab.active {
   color: #fff;
-  background: #409eff;
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+}
+
+/* ── 空状态引导 ── */
+.empty-guide {
+  text-align: center;
+  padding: 60px 32px 40px;
+  background: #fff;
+  border-radius: 16px;
+  margin-bottom: 20px;
+  border: 1px dashed rgba(37, 99, 235, 0.15);
+}
+.empty-guide-icon {
+  margin-bottom: 16px;
+  color: #93c5fd;
+}
+.empty-guide-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0 0 8px;
+}
+.empty-guide-desc {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0 0 24px;
+  line-height: 1.6;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.empty-guide-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 32px;
+}
+.empty-guide-tips {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+.guide-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #64748b;
+}
+.tip-icon {
+  display: flex;
+  align-items: center;
+}
+
+/* ── 拖拽分隔条 ── */
+.resize-handle {
+  width: 4px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: transparent;
+  position: relative;
+  z-index: 5;
+  transition: background 0.15s;
+}
+.resize-handle:hover,
+.resize-handle:active {
+  background: rgba(37, 99, 235, 0.25);
+}
+
+/* ── 模板选择器 ── */
+.template-selector {
+  user-select: none;
+}
+.template-current {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #475569;
+  border: 1px solid rgba(37, 99, 235, 0.1);
+  background: rgba(255,255,255,0.6);
+  transition: all 0.15s;
+}
+.template-current:hover {
+  border-color: rgba(37, 99, 235, 0.25);
+  background: #fff;
+}
+.chevron {
+  font-size: 12px;
+  transition: transform 0.2s;
+}
+.chevron.open {
+  transform: rotate(180deg);
+}
+/* Teleported to body — no scoping issues */
+.template-picker-dropdown {
+  padding: 12px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.18);
+  animation: picker-in 0.15s ease;
+}
+@keyframes picker-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.picker-arrow {
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  margin-left: -5px;
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  transform: rotate(45deg);
+  box-shadow: -2px -2px 4px rgba(0,0,0,0.04);
+}
+.picker-cards {
+  display: flex;
+  gap: 8px;
+}
+.template-card {
+  width: 100px;
+  cursor: pointer;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid #e2e8f0;
+  transition: all 0.2s;
+  background: #fafafa;
+}
+.template-card:hover {
+  border-color: #93c5fd;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.10);
+}
+.template-card.active {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+.template-preview {
+  padding: 8px;
+  height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.template-preview svg {
+  width: 80px;
+  height: auto;
+  display: block;
+}
+.template-card-label {
+  text-align: center;
+  font-size: 11px;
+  color: #475569;
+  padding: 6px 0;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  font-weight: 500;
+}
+.template-card.active .template-card-label {
+  color: #2563eb;
+  background: #eff6ff;
 }
 
 @media (max-width: 1200px) {
@@ -753,7 +1230,7 @@ function closeJdDialog() {
   width: 100vw;
   height: 100vh;
   z-index: 9999;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(15, 23, 42, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -772,7 +1249,7 @@ function closeJdDialog() {
   padding: 48px 56px;
   text-align: center;
   min-width: 320px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.3);
   animation: overlayContentIn 0.3s ease;
 }
 
@@ -787,7 +1264,7 @@ function closeJdDialog() {
 
 .spinner-icon {
   animation: importSpin 1s linear infinite;
-  color: #409eff;
+  color: #2563eb;
 }
 
 @keyframes importSpin {
@@ -797,7 +1274,7 @@ function closeJdDialog() {
 
 .import-step-text {
   font-size: 15px;
-  color: #333;
+  color: #0f172a;
   margin: 0 0 16px;
   font-weight: 500;
 }
@@ -805,7 +1282,7 @@ function closeJdDialog() {
 .import-progress-bar {
   width: 200px;
   height: 4px;
-  background: #e8e8e8;
+  background: #dbeafe;
   border-radius: 2px;
   overflow: hidden;
   margin: 0 auto;
@@ -814,7 +1291,7 @@ function closeJdDialog() {
 .import-progress-fill {
   height: 100%;
   width: 20%;
-  background: linear-gradient(90deg, #409eff, #66b1ff);
+  background: linear-gradient(90deg, #2563eb, #3b82f6);
   border-radius: 2px;
   transition: width 0.6s ease;
   animation: progressIndeterminate 1.5s ease-in-out infinite;
@@ -827,7 +1304,7 @@ function closeJdDialog() {
 .import-progress-fill.full {
   width: 100%;
   animation: none;
-  background: linear-gradient(90deg, #67c23a, #85ce61);
+  background: linear-gradient(90deg, #10b981, #34d399);
 }
 
 @keyframes progressIndeterminate {
@@ -842,7 +1319,7 @@ function closeJdDialog() {
 
 .import-error-text {
   font-size: 15px;
-  color: #f56c6c;
+  color: #ef4444;
   margin: 0 0 20px;
   font-weight: 500;
 }

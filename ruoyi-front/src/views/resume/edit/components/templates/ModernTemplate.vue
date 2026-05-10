@@ -1,7 +1,7 @@
 <template>
   <div class="modern-template">
     <!-- 基本信息 -->
-    <header v-if="visibility.baseInfo !== false" class="section" :style="{ order: moduleOrder.indexOf('baseInfo') }">
+    <header v-if="visibility.baseInfo !== false" class="section" data-section="baseInfo" :style="{ order: moduleOrder.indexOf('baseInfo') }">
       <div class="header-inner">
         <div class="info-col">
           <h1 class="name">
@@ -37,7 +37,7 @@
     </header>
 
     <!-- 求职意向 -->
-    <section v-if="visibility.intention !== false && content.intention?.position" class="section" :style="{ order: moduleOrder.indexOf('intention') }">
+    <section v-if="visibility.intention !== false && content.intention?.position" class="section" data-section="intention" :style="{ order: moduleOrder.indexOf('intention') }">
       <h3 class="sec-title">求职意向</h3>
       <table class="info-table">
         <tr v-if="content.intention.position">
@@ -60,9 +60,9 @@
     </section>
 
     <!-- 教育经历 -->
-    <section v-if="visibility.education !== false && content.education?.length" class="section" :style="{ order: moduleOrder.indexOf('education') }">
+    <section v-if="visibility.education !== false && content.education?.length" class="section" data-section="education" :style="{ order: moduleOrder.indexOf('education') }">
       <h3 class="sec-title">教育背景</h3>
-      <div v-for="(edu, i) in content.education" :key="i" class="edu-row">
+      <div v-for="(edu, i) in content.education" :key="i" class="edu-row" :data-section-index="i">
         <div class="edu-left">
           <EditableText class="edu-school" :model-value="edu.school" @update:model-value="v => set('education.' + i + '.school', v)" />
         </div>
@@ -83,9 +83,9 @@
     </section>
 
     <!-- 工作经历 -->
-    <section v-if="visibility.experience !== false && content.experience?.length" class="section" :style="{ order: moduleOrder.indexOf('experience') }">
+    <section v-if="visibility.experience !== false && content.experience?.length" class="section" data-section="experience" :style="{ order: moduleOrder.indexOf('experience') }">
       <h3 class="sec-title">工作经历</h3>
-      <div v-for="(exp, i) in content.experience" :key="i" class="exp-block">
+      <div v-for="(exp, i) in content.experience" :key="i" class="exp-block" :data-section-index="i">
         <div class="exp-header">
           <EditableText class="exp-company" :model-value="exp.company" @update:model-value="v => set('experience.' + i + '.company', v)" />
           <EditableText class="exp-position" :model-value="exp.position" @update:model-value="v => set('experience.' + i + '.position', v)" />
@@ -96,9 +96,9 @@
     </section>
 
     <!-- 校园经历 -->
-    <section v-if="visibility.campus !== false && content.campus?.length" class="section" :style="{ order: moduleOrder.indexOf('campus') }">
+    <section v-if="visibility.campus !== false && content.campus?.length" class="section" data-section="campus" :style="{ order: moduleOrder.indexOf('campus') }">
       <h3 class="sec-title">校园经历</h3>
-      <div v-for="(item, i) in content.campus" :key="i" class="exp-block">
+      <div v-for="(item, i) in content.campus" :key="i" class="exp-block" :data-section-index="i">
         <div class="exp-header">
           <EditableText class="exp-company" :model-value="item.organization" @update:model-value="v => set('campus.' + i + '.organization', v)" />
           <EditableText class="exp-position" :model-value="item.position" @update:model-value="v => set('campus.' + i + '.position', v)" />
@@ -109,9 +109,9 @@
     </section>
 
     <!-- 项目经验 -->
-    <section v-if="visibility.projects !== false && content.projects?.length" class="section" :style="{ order: moduleOrder.indexOf('projects') }">
+    <section v-if="visibility.projects !== false && content.projects?.length" class="section" data-section="projects" :style="{ order: moduleOrder.indexOf('projects') }">
       <h3 class="sec-title">项目经验</h3>
-      <div v-for="(proj, i) in content.projects" :key="i" class="exp-block">
+      <div v-for="(proj, i) in content.projects" :key="i" class="exp-block" :data-section-index="i">
         <div class="exp-header">
           <EditableText class="exp-company" :model-value="proj.name" @update:model-value="v => set('projects.' + i + '.name', v)" />
           <EditableText class="exp-position" :model-value="proj.role" @update:model-value="v => set('projects.' + i + '.role', v)" />
@@ -122,7 +122,7 @@
     </section>
 
     <!-- 荣誉奖项 -->
-    <section v-if="visibility.awards !== false && content.awards?.length" class="section" :style="{ order: moduleOrder.indexOf('awards') }">
+    <section v-if="visibility.awards !== false && content.awards?.length" class="section" data-section="awards" :style="{ order: moduleOrder.indexOf('awards') }">
       <h3 class="sec-title">荣誉奖项</h3>
       <div v-for="(award, i) in content.awards" :key="i" class="award-row">
         <span class="award-name"><EditableText :model-value="award.name" @update:model-value="v => set('awards.' + i + '.name', v)" /></span>
@@ -132,7 +132,7 @@
     </section>
 
     <!-- 证书 -->
-    <section v-if="visibility.certificates !== false && content.certificates?.length" class="section" :style="{ order: moduleOrder.indexOf('certificates') }">
+    <section v-if="visibility.certificates !== false && content.certificates?.length" class="section" data-section="certificates" :style="{ order: moduleOrder.indexOf('certificates') }">
       <h3 class="sec-title">证书</h3>
       <div v-for="(cert, i) in content.certificates" :key="i" class="award-row">
         <span class="award-name"><EditableText :model-value="cert.name" @update:model-value="v => set('certificates.' + i + '.name', v)" /></span>
@@ -141,7 +141,7 @@
     </section>
 
     <!-- 技能特长 -->
-    <section v-if="visibility.skills !== false && content.skills?.length" class="section" :style="{ order: moduleOrder.indexOf('skills') }">
+    <section v-if="visibility.skills !== false && content.skills?.length" class="section" data-section="skills" :style="{ order: moduleOrder.indexOf('skills') }">
       <h3 class="sec-title">技能特长</h3>
       <div class="skills-wrap">
         <EditableText v-for="(skill, i) in content.skills" :key="i" class="skill-tag" :model-value="skill" @update:model-value="v => { const arr = [...content.skills]; arr[i] = v; set('skills', arr) }" />
@@ -149,7 +149,7 @@
     </section>
 
     <!-- 自我评价 -->
-    <section v-if="visibility.evaluation !== false && content.evaluation" class="section" :style="{ order: moduleOrder.indexOf('evaluation') }">
+    <section v-if="visibility.evaluation !== false && content.evaluation" class="section" data-section="evaluation" :style="{ order: moduleOrder.indexOf('evaluation') }">
       <h3 class="sec-title">自我评价</h3>
       <EditableText class="eval-text" :model-value="content.evaluation" :multiline="true" :placeholder="'写一段自我评价...'" @update:model-value="v => set('evaluation', v)" />
     </section>

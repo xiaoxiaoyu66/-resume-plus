@@ -31,6 +31,17 @@
           <div class="card-actions" @click.stop>
             <el-button type="primary" link size="small" @click="editResume(resume.id)">编辑</el-button>
             <el-button type="success" link size="small" @click="quickExport(resume.id)">导出</el-button>
+            <el-dropdown trigger="click" @command="(mode: string) => startInterview(resume.id, mode)">
+              <el-button type="warning" link size="small">
+                模拟面试 <el-icon><ArrowDown /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="hr">👥 HR 行为面试</el-dropdown-item>
+                  <el-dropdown-item command="pro">💼 专业面试</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
             <el-button type="danger" link size="small" @click="confirmDelete(resume)">删除</el-button>
           </div>
         </div>
@@ -42,6 +53,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { ArrowDown } from '@element-plus/icons-vue'
 import { getResumeList, deleteResume } from '@/api/resume'
 
 const router = useRouter()
@@ -74,6 +86,14 @@ const editResume = (id: number) => {
 
 const quickExport = (id: number) => {
   router.push(`/resume/edit/${id}?export=true`)
+}
+
+const startInterview = (resumeId: number, mode: string) => {
+  const sceneMap: Record<string, string> = { hr: 'interview-hr', pro: 'interview-pro' }
+  router.push({
+    path: '/chat',
+    query: { scene: sceneMap[mode], resumeId: String(resumeId) }
+  })
 }
 
 const confirmDelete = (resume: any) => {

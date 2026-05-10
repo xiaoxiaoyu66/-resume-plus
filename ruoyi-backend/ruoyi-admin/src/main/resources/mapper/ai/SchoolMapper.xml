@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.ruoyi.web.controller.ai.mapper.SchoolMapper">
+
+    <resultMap id="SchoolResult" type="com.ruoyi.web.controller.ai.domain.School">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="city" column="city"/>
+        <result property="province" column="province"/>
+        <result property="level" column="level"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <sql id="selectSchoolVo">
+        SELECT id, name, city, province, level, create_time
+        FROM schools
+    </sql>
+
+    <select id="searchByKeyword" resultMap="SchoolResult">
+        <include refid="selectSchoolVo"/>
+        WHERE name LIKE CONCAT('%', #{keyword}, '%')
+        ORDER BY
+            CASE WHEN name LIKE CONCAT(#{keyword}, '%') THEN 0 ELSE 1 END,
+            FIELD(level, '985', '211', '双一流', '普通本科', '专科'),
+            name
+    </select>
+
+    <select id="searchByKeywordLimit" resultMap="SchoolResult">
+        <include refid="selectSchoolVo"/>
+        WHERE name LIKE CONCAT('%', #{keyword}, '%')
+        ORDER BY
+            CASE WHEN name LIKE CONCAT(#{keyword}, '%') THEN 0 ELSE 1 END,
+            FIELD(level, '985', '211', '双一流', '普通本科', '专科'),
+            name
+        LIMIT #{limit}
+    </select>
+
+</mapper>

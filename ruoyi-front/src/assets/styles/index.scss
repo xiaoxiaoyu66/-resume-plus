@@ -1,5 +1,5 @@
 /* =====================================================
-   若依 AI 助手 - 水墨画主题样式
+   若依 AI 助手 - 海洋蓝主题样式
    ===================================================== */
 
 /* 基础样式重置 */
@@ -11,47 +11,47 @@
 
 html, body, #app {
   height: 100%;
-  font-family: 'Noto Serif SC', 'Source Han Serif SC', 'SimSun', 'STSong', 'Microsoft YaHei', serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
 }
 
-/* 水墨画主题变量 */
+/* 海洋蓝主题变量 */
 :root {
-  /* 主色 - 靛蓝墨韵 */
-  --ink-primary: #0E3265;
-  --ink-primary-light: #1a4a7a;
-  --ink-primary-lighter: #2a6a9a;
-  --ink-primary-dark: #0A1E3D;
-  
+  /* 主色 - 海洋蓝 */
+  --ink-primary: #2563eb;
+  --ink-primary-light: #1d4ed8;
+  --ink-primary-lighter: #3b82f6;
+  --ink-primary-dark: #1e40af;
+
   /* 点缀色 */
-  --ink-accent: #C45C48;              /* 朱砂红 */
-  --ink-paper: #F9F6F0;               /* 宣纸底色 */
-  --ink-paper-light: #FDFBF8;
-  
+  --ink-accent: #3b82f6;
+  --ink-paper: #f0f7ff;
+  --ink-paper-light: #ffffff;
+
   /* 墨色层级 */
-  --ink-ink-deep: #0A1E3D;            /* 浓墨 */
-  --ink-ink-mid: #0E3265;             /* 中墨 */
-  --ink-ink-light: #5B7FA5;           /* 淡墨 */
-  --ink-ink-pale: #B8C9D9;            /* 清墨 */
-  --ink-ink-wash: #D6E0EB;            /* 浅渲 */
-  
+  --ink-ink-deep: #0f172a;
+  --ink-ink-mid: #1e40af;
+  --ink-ink-light: #6b7280;
+  --ink-ink-pale: #93c5fd;
+  --ink-ink-wash: #dbeafe;
+
   /* 边框和阴影 */
-  --ink-border: rgba(14, 50, 101, 0.12);
-  --ink-border-hover: rgba(14, 50, 101, 0.25);
-  --ink-shadow: rgba(14, 50, 101, 0.10);
-  --ink-shadow-strong: rgba(14, 50, 101, 0.20);
+  --ink-border: rgba(37, 99, 235, 0.15);
+  --ink-border-hover: rgba(37, 99, 235, 0.3);
+  --ink-shadow: rgba(37, 99, 235, 0.10);
+  --ink-shadow-strong: rgba(37, 99, 235, 0.18);
 
   /* Element Plus 主题覆盖 */
   --el-color-primary: var(--ink-primary);
   --el-color-primary-light-3: var(--ink-primary-lighter);
-  --el-color-primary-light-5: #5B7FA5;
-  --el-color-primary-light-7: #8AabC5;
-  --el-color-primary-light-8: #B8C9D9;
-  --el-color-primary-light-9: #D6E0EB;
+  --el-color-primary-light-5: #93c5fd;
+  --el-color-primary-light-7: #bfdbfe;
+  --el-color-primary-light-8: #dbeafe;
+  --el-color-primary-light-9: #eff6ff;
   --el-color-primary-dark-2: var(--ink-primary-dark);
-  --el-color-success: #5B7FA5;
-  --el-color-warning: #B8860B;
-  --el-color-danger: var(--ink-accent);
-  --el-color-info: #8AabC5;
+  --el-color-success: #10b981;
+  --el-color-warning: #f59e0b;
+  --el-color-danger: #ef4444;
+  --el-color-info: #60a5fa;
 
   --el-bg-color: var(--ink-paper);
   --el-bg-color-overlay: var(--ink-paper-light);
@@ -69,11 +69,9 @@ html, body, #app {
 /* 页面背景 */
 body {
   background-color: var(--ink-paper);
-  background-image:
-    url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.02'/%3E%3C/svg%3E");
 }
 
-/* 水墨风格滚动条 */
+/* 海洋蓝风格滚动条 */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -96,15 +94,25 @@ body {
   --el-button-hover-bg-color: var(--ink-primary-light);
   --el-button-hover-border-color: var(--ink-primary-light);
   --el-button-active-bg-color: var(--ink-primary-dark);
-  --el-button-text-color: #F9F6F0;
-  border-radius: 6px;
-  letter-spacing: 1px;
+  --el-button-text-color: #ffffff;
+  border-radius: 8px;
+  letter-spacing: 0.5px;
   font-weight: 500;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px var(--ink-shadow-strong);
+    box-shadow: 0 4px 14px var(--ink-shadow-strong);
+  }
+}
+
+.el-button--default {
+  border-radius: 8px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: var(--ink-primary);
+    color: var(--ink-primary);
   }
 }
 
@@ -112,14 +120,38 @@ body {
   background-color: var(--ink-paper-light) !important;
   box-shadow: 0 0 0 1px var(--ink-border) inset !important;
   border-radius: 8px !important;
+  transition: box-shadow 0.2s ease;
 
   &:hover {
     box-shadow: 0 0 0 1px var(--ink-border-hover) inset !important;
   }
 
   &.is-focus {
-    box-shadow: 0 0 0 1px var(--ink-primary) inset !important;
+    box-shadow: 0 0 0 2px var(--ink-primary) inset !important;
   }
+}
+
+/* el-select / el-date-picker wrappers share .el-input__wrapper */
+.el-select .el-input__wrapper,
+.el-date-picker .el-input__wrapper {
+  background-color: var(--ink-paper-light) !important;
+}
+
+/* Tag 样式 */
+.el-tag {
+  border-radius: 6px;
+  border: none;
+}
+
+/* Dialog */
+.el-dialog {
+  border-radius: 16px !important;
+  --el-dialog-bg-color: #ffffff;
+}
+
+/* Select dropdown */
+.el-select-dropdown {
+  border-radius: 12px !important;
 }
 
 /* 工具类 */
@@ -132,17 +164,4 @@ body {
   background: linear-gradient(90deg, transparent, var(--ink-ink-pale), transparent);
   border: none;
   margin: 24px 0;
-}
-
-.ink-seal {
-  display: inline-block;
-  padding: 2px 12px;
-  border: 2px solid var(--ink-accent);
-  color: var(--ink-accent);
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 2px;
-  transform: rotate(-2deg);
-  opacity: 0.85;
 }

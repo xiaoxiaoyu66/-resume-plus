@@ -21,12 +21,7 @@
             </el-radio-group>
           </el-form-item>
           <el-form-item label="出生年月">
-            <el-date-picker
-              v-model="content.baseInfo.birth"
-              type="month"
-              placeholder="选择出生年月"
-              value-format="YYYY-MM"
-            />
+            <DatePicker v-model="content.baseInfo.birth" />
           </el-form-item>
           <el-form-item label="所在城市">
             <el-input v-model="content.baseInfo.city" placeholder="如：北京" />
@@ -87,27 +82,36 @@
           <el-icon><Plus /></el-icon>添加
         </el-button>
       </h3>
-      <div v-for="(edu, index) in content.education" :key="index" class="item-card">
+      <div
+        v-for="(edu, index) in content.education"
+        :key="index"
+        class="item-card"
+        :class="{ 'drag-over': dragState.education?.over === index }"
+        draggable="true"
+        @dragstart="onArrayDragStart('education', index)"
+        @dragover="onArrayDragOver($event, 'education', index)"
+        @dragleave="onArrayDragLeave('education')"
+        @drop="onArrayDrop('education', index)"
+        @dragend="onArrayDragEnd('education')"
+      >
         <div class="item-header">
-          <span>经历 {{ index + 1 }}</span>
+          <span class="drag-handle-item">
+            <el-icon><Rank /></el-icon>
+            经历 {{ index + 1 }}
+          </span>
           <el-button type="danger" link size="small" @click="removeEducation(index)">
             <el-icon><Delete /></el-icon>删除
           </el-button>
         </div>
         <el-form :model="edu" label-width="80px" size="default">
           <el-form-item label="学校" required>
-            <el-input v-model="edu.school" placeholder="学校名称" />
+            <SchoolSearch v-model="edu.school" :school-id="edu.schoolId" @update:school-id="v => edu.schoolId = v" />
           </el-form-item>
           <el-form-item label="专业" required>
             <el-input v-model="edu.major" placeholder="专业名称" />
           </el-form-item>
           <el-form-item label="学历" required>
-            <el-select v-model="edu.degree" placeholder="请选择">
-              <el-option label="大专" value="大专" />
-              <el-option label="本科" value="本科" />
-              <el-option label="硕士" value="硕士" />
-              <el-option label="博士" value="博士" />
-            </el-select>
+            <el-input v-model="edu.degree" placeholder="如：本科、硕士" />
           </el-form-item>
           <el-form-item label="时间段" required>
             <DateRangePicker :model-value="{ start: edu.start, end: edu.end }" @update:model-value="v => { edu.start = v.start; edu.end = v.end }" />
@@ -152,9 +156,23 @@
           <el-icon><Plus /></el-icon>添加
         </el-button>
       </h3>
-      <div v-for="(exp, index) in content.experience" :key="index" class="item-card">
+      <div
+        v-for="(exp, index) in content.experience"
+        :key="index"
+        class="item-card"
+        :class="{ 'drag-over': dragState.experience?.over === index }"
+        draggable="true"
+        @dragstart="onArrayDragStart('experience', index)"
+        @dragover="onArrayDragOver($event, 'experience', index)"
+        @dragleave="onArrayDragLeave('experience')"
+        @drop="onArrayDrop('experience', index)"
+        @dragend="onArrayDragEnd('experience')"
+      >
         <div class="item-header">
-          <span>经历 {{ index + 1 }}</span>
+          <span class="drag-handle-item">
+            <el-icon><Rank /></el-icon>
+            经历 {{ index + 1 }}
+          </span>
           <el-button type="danger" link size="small" @click="removeExperience(index)">
             <el-icon><Delete /></el-icon>删除
           </el-button>
@@ -186,9 +204,23 @@
           <el-icon><Plus /></el-icon>添加
         </el-button>
       </h3>
-      <div v-for="(item, index) in content.campus" :key="index" class="item-card">
+      <div
+        v-for="(item, index) in content.campus"
+        :key="index"
+        class="item-card"
+        :class="{ 'drag-over': dragState.campus?.over === index }"
+        draggable="true"
+        @dragstart="onArrayDragStart('campus', index)"
+        @dragover="onArrayDragOver($event, 'campus', index)"
+        @dragleave="onArrayDragLeave('campus')"
+        @drop="onArrayDrop('campus', index)"
+        @dragend="onArrayDragEnd('campus')"
+      >
         <div class="item-header">
-          <span>经历 {{ index + 1 }}</span>
+          <span class="drag-handle-item">
+            <el-icon><Rank /></el-icon>
+            经历 {{ index + 1 }}
+          </span>
           <el-button type="danger" link size="small" @click="removeCampus(index)">
             <el-icon><Delete /></el-icon>删除
           </el-button>
@@ -220,9 +252,23 @@
           <el-icon><Plus /></el-icon>添加
         </el-button>
       </h3>
-      <div v-for="(proj, index) in content.projects" :key="index" class="item-card">
+      <div
+        v-for="(proj, index) in content.projects"
+        :key="index"
+        class="item-card"
+        :class="{ 'drag-over': dragState.projects?.over === index }"
+        draggable="true"
+        @dragstart="onArrayDragStart('projects', index)"
+        @dragover="onArrayDragOver($event, 'projects', index)"
+        @dragleave="onArrayDragLeave('projects')"
+        @drop="onArrayDrop('projects', index)"
+        @dragend="onArrayDragEnd('projects')"
+      >
         <div class="item-header">
-          <span>项目 {{ index + 1 }}</span>
+          <span class="drag-handle-item">
+            <el-icon><Rank /></el-icon>
+            项目 {{ index + 1 }}
+          </span>
           <el-button type="danger" link size="small" @click="removeProject(index)">
             <el-icon><Delete /></el-icon>删除
           </el-button>
@@ -254,9 +300,23 @@
           <el-icon><Plus /></el-icon>添加
         </el-button>
       </h3>
-      <div v-for="(award, index) in content.awards" :key="index" class="item-card">
+      <div
+        v-for="(award, index) in content.awards"
+        :key="index"
+        class="item-card"
+        :class="{ 'drag-over': dragState.awards?.over === index }"
+        draggable="true"
+        @dragstart="onArrayDragStart('awards', index)"
+        @dragover="onArrayDragOver($event, 'awards', index)"
+        @dragleave="onArrayDragLeave('awards')"
+        @drop="onArrayDrop('awards', index)"
+        @dragend="onArrayDragEnd('awards')"
+      >
         <div class="item-header">
-          <span>奖项 {{ index + 1 }}</span>
+          <span class="drag-handle-item">
+            <el-icon><Rank /></el-icon>
+            奖项 {{ index + 1 }}
+          </span>
           <el-button type="danger" link size="small" @click="removeAward(index)">
             <el-icon><Delete /></el-icon>删除
           </el-button>
@@ -290,9 +350,23 @@
           <el-icon><Plus /></el-icon>添加
         </el-button>
       </h3>
-      <div v-for="(cert, index) in content.certificates" :key="index" class="item-card">
+      <div
+        v-for="(cert, index) in content.certificates"
+        :key="index"
+        class="item-card"
+        :class="{ 'drag-over': dragState.certificates?.over === index }"
+        draggable="true"
+        @dragstart="onArrayDragStart('certificates', index)"
+        @dragover="onArrayDragOver($event, 'certificates', index)"
+        @dragleave="onArrayDragLeave('certificates')"
+        @drop="onArrayDrop('certificates', index)"
+        @dragend="onArrayDragEnd('certificates')"
+      >
         <div class="item-header">
-          <span>证书 {{ index + 1 }}</span>
+          <span class="drag-handle-item">
+            <el-icon><Rank /></el-icon>
+            证书 {{ index + 1 }}
+          </span>
           <el-button type="danger" link size="small" @click="removeCertificate(index)">
             <el-icon><Delete /></el-icon>删除
           </el-button>
@@ -347,12 +421,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
+import { ref, reactive, computed, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Plus, Delete } from '@element-plus/icons-vue'
+import { Plus, Delete, Rank } from '@element-plus/icons-vue'
 import { useResumeStore } from '@/store/resume'
 import MarkdownTextarea from './MarkdownTextarea.vue'
 import DateRangePicker from './DateRangePicker.vue'
+import DatePicker from './DatePicker.vue'
+import SchoolSearch from '@/components/SchoolSearch.vue'
 import type { EducationEntry } from '@/types/resume'
 
 const resumeStore = useResumeStore()
@@ -366,6 +442,39 @@ const inputValue = ref('')
 const skillInputRef = ref<HTMLElement | null>(null)
 const avatarInputRef = ref<HTMLElement | null>(null)
 const courseInputRef = ref<HTMLElement | null>(null)
+
+// 可拖拽条目状态
+const dragState = reactive<Record<string, { from: number; over: number }>>({})
+function getDragState(module: string) {
+  if (!dragState[module]) dragState[module] = { from: -1, over: -1 }
+  return dragState[module]
+}
+function onArrayDragStart(module: string, index: number) {
+  getDragState(module).from = index
+}
+function onArrayDragOver(e: DragEvent, module: string, index: number) {
+  const ds = getDragState(module)
+  if (ds.from === index) return
+  e.preventDefault()
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+  ds.over = index
+}
+function onArrayDragLeave(module: string) {
+  getDragState(module).over = -1
+}
+function onArrayDrop(module: string, index: number) {
+  const ds = getDragState(module)
+  if (ds.from >= 0 && ds.from !== index) {
+    resumeStore.moveArrayEntry(module, ds.from, index)
+  }
+  ds.from = -1
+  ds.over = -1
+}
+function onArrayDragEnd(module: string) {
+  const ds = getDragState(module)
+  ds.from = -1
+  ds.over = -1
+}
 
 // 头像上传
 const triggerAvatarInput = () => {
@@ -533,33 +642,86 @@ const onFormFocus = () => {
   margin: 0 auto;
   display: flex;
   flex-direction: column;
+  gap: 4px;
 }
 
 .form-section {
-  margin-bottom: 32px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid #eee;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.06), 0 1px 2px rgba(37, 99, 235, 0.04);
+  border: 1px solid rgba(37, 99, 235, 0.06);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.form-section:hover {
+  border-color: rgba(37, 99, 235, 0.12);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.06), 0 2px 4px rgba(37, 99, 235, 0.04);
 }
 
 .form-section:last-child {
-  border-bottom: none;
+  margin-bottom: 0;
 }
 
 .section-title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
-  color: #333;
-  margin-bottom: 16px;
+  color: #1e40af;
+  margin-bottom: 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  letter-spacing: 0.3px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(37, 99, 235, 0.08);
 }
 
 .item-card {
-  background: #fafafa;
-  border-radius: 8px;
+  background: #f0f7ff;
+  border-radius: 10px;
   padding: 16px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(37, 99, 235, 0.06);
+  transition: border-color 0.2s, opacity 0.15s, box-shadow 0.15s;
+  cursor: default;
+}
+
+.item-card:hover {
+  border-color: rgba(37, 99, 235, 0.15);
+}
+
+.item-card:last-child {
+  margin-bottom: 0;
+}
+
+.item-card[draggable="true"] {
+  cursor: grab;
+}
+.item-card[draggable="true"]:active {
+  cursor: grabbing;
+  opacity: 0.85;
+}
+.item-card.drag-over {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+  background: #eff6ff;
+}
+
+.drag-handle-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #60a5fa;
+  font-weight: 500;
+}
+.drag-handle-item .el-icon {
+  cursor: grab;
+  color: #bfdbfe;
+  font-size: 14px;
+}
+.drag-handle-item .el-icon:hover {
+  color: #2563eb;
 }
 
 .item-header {
@@ -568,7 +730,8 @@ const onFormFocus = () => {
   align-items: center;
   margin-bottom: 12px;
   font-size: 13px;
-  color: #666;
+  color: #60a5fa;
+  font-weight: 500;
 }
 
 .skills-input-wrapper {
@@ -605,18 +768,19 @@ const onFormFocus = () => {
   width: 100px;
   height: 100px;
   border-radius: 50%;
-  border: 2px dashed var(--el-border-color);
+  border: 2px dashed rgba(37, 99, 235, 0.2);
   cursor: pointer;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: border-color 0.2s;
-  background: #fafafa;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background: #f0f7ff;
 }
 
 .avatar-uploader:hover {
-  border-color: var(--el-color-primary);
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 .avatar-preview {
@@ -630,7 +794,7 @@ const onFormFocus = () => {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  color: #999;
+  color: #93c5fd;
   font-size: 11px;
 }
 
@@ -641,14 +805,14 @@ const onFormFocus = () => {
 .avatar-hint {
   margin: 4px 0 0;
   font-size: 11px;
-  color: #999;
+  color: #93c5fd;
   text-align: center;
 }
 
 /* STAR 提示 */
 .star-hint {
   font-size: 11px;
-  color: #909399;
+  color: #93c5fd;
   margin-bottom: 4px;
   line-height: 1.5;
 }

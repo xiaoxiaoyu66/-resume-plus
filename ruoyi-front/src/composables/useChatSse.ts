@@ -30,6 +30,7 @@ export function useChatSse(options) {
   function cancelCurrentReply() {
     stopSse()
     clearFirstTokenTimer()
+    uploadedFiles.value = []
     if (isThinking.value) {
       isThinking.value = false
       ElMessage.info('已取消本次回答')

@@ -40,6 +40,7 @@ interface ResumeState {
   style: ResumeStyle
   saving: boolean
   lastSaved: Date | null
+  dirty: boolean
   autoSaveTimer: ReturnType<typeof setTimeout> | null
   undoStack: ResumeSnapshot[]
   redoStack: ResumeSnapshot[]
@@ -57,6 +58,7 @@ export const useResumeStore = defineStore('resume', {
     style: { ...defaultStyle },
     saving: false,
     lastSaved: null,
+    dirty: false,
     autoSaveTimer: null,
     undoStack: [],
     redoStack: [],
@@ -74,6 +76,7 @@ export const useResumeStore = defineStore('resume', {
       const now = Date.now()
       if (!force && this._lastCapture && now - this._lastCapture < 1000) return
       this._lastCapture = now
+      this.dirty = true
       this.undoStack.push(this._snapshot())
       if (this.undoStack.length > 50) this.undoStack.shift()
       this.redoStack = []
@@ -231,6 +234,17 @@ export const useResumeStore = defineStore('resume', {
       this.scheduleAutoSave()
     },
 
+    moveArrayEntry(module: string, fromIndex: number, toIndex: number) {
+      if (fromIndex === toIndex) return
+      this.captureUndo(true)
+      const arr = this.content[module as keyof ResumeContent]
+      if (Array.isArray(arr)) {
+        const [moved] = arr.splice(fromIndex, 1)
+        arr.splice(toIndex, 0, moved)
+        this.scheduleAutoSave()
+      }
+    },
+
     scheduleAutoSave() {
       if (this.autoSaveTimer) {
         clearTimeout(this.autoSaveTimer)
@@ -264,6 +278,7 @@ export const useResumeStore = defineStore('resume', {
           }
         }
         this.lastSaved = new Date()
+        this.dirty = false
       } catch (error) {
         console.error('保存简历失败:', error)
       } finally {

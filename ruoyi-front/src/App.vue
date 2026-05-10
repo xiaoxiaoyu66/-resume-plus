@@ -57,37 +57,39 @@
 
         <router-link to="/resume" :class="{ active: $route.path.startsWith('/resume') }" class="nav-item">
           <div class="nav-icon">
-            <el-icon><Document /></el-icon>
+            <el-icon><EditPen /></el-icon>
           </div>
           <span class="nav-label">简历编辑器</span>
           <div class="nav-ink"></div>
         </router-link>
 
+        <!-- 模拟面试 -->
+        <router-link to="/interview" :class="{ active: $route.path.startsWith('/interview') }" class="nav-item">
+          <div class="nav-icon">
+            <el-icon><ChatDotSquare /></el-icon>
+          </div>
+          <span class="nav-label">模拟面试</span>
+          <div class="nav-ink"></div>
+        </router-link>
+
         <!-- 江城聘 -->
-        <div
-          :class="['nav-item', { active: showJobsSection }]"
-          @click="toggleJobsSection"
+        <router-link
+          to="/jiangcheng"
+          :class="['nav-item', { active: $route.path === '/jiangcheng' }]"
         >
           <div class="nav-icon">
-            <el-icon><Briefcase /></el-icon>
+            <el-icon><TrendCharts /></el-icon>
           </div>
           <span class="nav-label">江城聘</span>
+          <span v-if="jobsStore.matchResults.length > 0" class="nav-badge">{{ jobsStore.matchResults.length }}</span>
           <div class="nav-ink"></div>
-        </div>
+        </router-link>
 
-        <!-- 岗位推荐列表 -->
-        <div v-if="showJobsSection" class="jobs-section">
-          <div class="jobs-section-header">
-            <span class="jobs-section-title">岗位推荐</span>
-            <router-link to="/jiangcheng" class="jobs-view-all">
-              查看更多 <el-icon><ArrowRight /></el-icon>
-            </router-link>
-          </div>
-
-          <template v-if="jobsStore.matchResults.length > 0">
+        <!-- 岗位推荐列表（紧凑） -->
+        <div v-if="jobsStore.matchResults.length > 0" class="jobs-section">
             <div class="jobs-list">
               <div
-                v-for="(item, i) in jobsStore.matchResults.slice(0, 3)"
+                v-for="(item, i) in jobsStore.matchResults.slice(0, 2)"
                 :key="i"
                 class="job-item"
                 @click="goToJiangcheng"
@@ -99,11 +101,9 @@
                 </div>
               </div>
             </div>
-          </template>
-
-          <div v-else class="jobs-empty">
-            <span>去简历编辑器匹配岗位</span>
-          </div>
+            <div class="jobs-view-all-inline" @click="goToJiangcheng">
+              全部 {{ jobsStore.matchResults.length }} 个岗位 <el-icon><ArrowRight /></el-icon>
+            </div>
         </div>
 
         <!-- 个人空间按钮 -->
@@ -152,8 +152,9 @@
 <script setup>
 import { computed, ref, onMounted, watch, provide } from 'vue'
 import {
-  ChatDotRound, ChatLineRound, UserFilled, Document,
-  ArrowRight, SwitchButton, Close, FolderOpened, Briefcase
+  ChatDotRound, ChatDotSquare, ChatLineRound, UserFilled, Document,
+  ArrowRight, SwitchButton, Close, FolderOpened, Briefcase, EditPen,
+  TrendCharts
 } from '@element-plus/icons-vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -184,14 +185,6 @@ const recentHistory = computed(() => {
 const isPersonalSpaceOpen = ref(false)
 const selectedFileFromSpace = ref(null)
 
-// 江城聘状态
-const showJobsSection = ref(false)
-function toggleJobsSection() {
-  showJobsSection.value = !showJobsSection.value
-  if (showJobsSection.value && jobsStore.allJobs.length === 0) {
-    jobsStore.fetchAllJobs()
-  }
-}
 function goToJiangcheng() {
   router.push('/jiangcheng')
 }
@@ -294,15 +287,17 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-// 水墨黑主题色 - 提高对比度，适应明亮环境
-$ink-black: #1a1a1a;
-$ink-deep: #252525;
-$ink-mid: #3a3a3a;
-$ink-light: #4a4a4a;
-$ink-pale: #888888;
+// 深海蓝主题 - 统一海洋蓝风格
+$navy-deep: #0f1d38;
+$navy-mid: #15294f;
+$navy-light: #1e3a6f;
+$navy-text: rgba(255, 255, 255, 0.85);
+$navy-text-secondary: rgba(255, 255, 255, 0.55);
+$navy-text-muted: rgba(255, 255, 255, 0.35);
 $paper-white: #ffffff;
 $paper-cream: #f8f8f6;
-$accent-red: #c45c48;
+$accent-blue: #3b82f6;
+$accent-blue-light: rgba(59, 130, 246, 0.15);
 
 .app-wrapper {
   min-height: 100vh;
@@ -313,10 +308,10 @@ $accent-red: #c45c48;
   }
 }
 
-// 侧边导航 - 提高亮度，增强在明亮环境下的可见性
+// 侧边导航 - 深海蓝
 .sidebar {
   width: 240px;
-  background: linear-gradient(180deg, #2d2d2d 0%, #1f1f1f 100%);
+  background: linear-gradient(180deg, #15294f 0%, #0a1a33 100%);
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -324,8 +319,8 @@ $accent-red: #c45c48;
   top: 0;
   bottom: 0;
   z-index: 100;
-  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.4);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 4px 0 20px rgba(15, 29, 56, 0.5);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
 
   &::before {
     content: '';
@@ -334,7 +329,7 @@ $accent-red: #c45c48;
     left: 0;
     right: 0;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+    background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.2), transparent);
   }
 }
 
@@ -363,18 +358,10 @@ $accent-red: #c45c48;
       left: 0;
       right: 0;
       height: 8px;
-      background: linear-gradient(90deg, transparent, rgba(139, 26, 26, 0.6), transparent);
+      background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.5), transparent);
       filter: blur(4px);
       z-index: 1;
     }
-  }
-
-  .logo-subtitle {
-    font-size: 12px;
-    color: $ink-pale;
-    font-family: 'Noto Serif SC', 'STSong', serif;
-    letter-spacing: 2px;
-    margin-top: 8px;
   }
 
   /* 简历+ Logo */
@@ -416,8 +403,8 @@ $accent-red: #c45c48;
     }
 
     &:hover {
-      border-color: $accent-red;
-      color: $accent-red;
+      border-color: $accent-blue;
+      color: $accent-blue;
       background: rgba(196, 92, 72, 0.08);
     }
   }
@@ -432,11 +419,14 @@ $accent-red: #c45c48;
   gap: 8px;
   overflow-y: auto;
 
-  // 历史对话区域
+  // 历史对话区域（可滚动）
   .history-section {
-    margin-top: 16px;
-    padding-top: 16px;
+    margin-top: 12px;
+    padding-top: 12px;
     border-top: 1px solid rgba(255, 255, 255, 0.06);
+    max-height: 280px;
+    display: flex;
+    flex-direction: column;
 
     .history-title {
       font-size: 12px;
@@ -445,18 +435,25 @@ $accent-red: #c45c48;
       font-weight: 500;
       text-transform: uppercase;
       letter-spacing: 1px;
+      flex-shrink: 0;
     }
 
     .history-list {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 2px;
+      overflow-y: auto;
+      flex: 1;
+      min-height: 0;
+
+      &::-webkit-scrollbar { width: 3px; }
+      &::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
 
       .history-item {
         display: flex;
         align-items: center;
         gap: 8px;
-        padding: 10px 12px;
+        padding: 8px 12px;
         border-radius: 6px;
         color: rgba(255, 255, 255, 0.75);
         font-size: 13px;
@@ -464,10 +461,7 @@ $accent-red: #c45c48;
         transition: all 0.3s ease;
         position: relative;
 
-        .el-icon {
-          font-size: 14px;
-          flex-shrink: 0;
-        }
+        .el-icon { font-size: 14px; flex-shrink: 0; }
 
         .history-text {
           flex: 1;
@@ -477,13 +471,14 @@ $accent-red: #c45c48;
         }
 
         .delete-icon {
-          opacity: 0.9;
+          opacity: 0;
           transition: all 0.3s ease;
           font-size: 12px;
           padding: 4px;
           border-radius: 4px;
           color: #ff6b6b;
           background: rgba(255, 107, 107, 0.15);
+          flex-shrink: 0;
 
           &:hover {
             background: rgba(255, 107, 107, 0.35);
@@ -514,13 +509,11 @@ $accent-red: #c45c48;
             transform: translateY(-50%);
             width: 3px;
             height: 16px;
-            background: $accent-red;
+            background: #3b82f6;
             border-radius: 0 2px 2px 0;
           }
-          
-          .delete-icon {
-            opacity: 0.8;
-          }
+
+          .delete-icon { opacity: 0.8; }
         }
       }
     }
@@ -531,68 +524,50 @@ $accent-red: #c45c48;
       align-items: center;
       justify-content: center;
       gap: 6px;
-      padding: 10px 12px;
-      margin-top: 8px;
+      padding: 8px 12px;
+      margin-top: 4px;
       border-radius: 6px;
-      color: rgba(255, 255, 255, 0.6);
-      font-size: 13px;
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 12px;
       cursor: pointer;
       transition: all 0.3s ease;
+      flex-shrink: 0;
 
       &:hover {
-        background: rgba(255, 255, 255, 0.08);
-        color: rgba(255, 255, 255, 0.9);
+        background: rgba(59, 130, 246, 0.15);
+        color: #93c5fd;
       }
 
-      .el-icon {
-        font-size: 12px;
-      }
+      .el-icon { font-size: 12px; }
     }
   }
 
-  // 岗位推荐列表
+  // nav-badge
+  .nav-badge {
+    margin-left: auto;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(59, 130, 246, 0.2);
+    color: #93c5fd;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  // 岗位推荐（紧凑）
   .jobs-section {
-    margin-top: 8px;
-    padding: 12px 16px;
+    margin: 0 12px 8px;
+    padding: 8px 10px;
     background: rgba(255, 255, 255, 0.03);
     border-radius: 8px;
 
-    .jobs-section-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 12px;
-
-      .jobs-section-title {
-        font-size: 12px;
-        color: rgba(255, 255, 255, 0.5);
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-      }
-
-      .jobs-view-all {
-        display: flex;
-        align-items: center;
-        gap: 2px;
-        font-size: 12px;
-        color: rgba(255, 255, 255, 0.45);
-        text-decoration: none;
-        transition: color 0.2s;
-
-        .el-icon {
-          font-size: 10px;
-        }
-
-        &:hover {
-          color: $accent-red;
-        }
-      }
-    }
-
     .jobs-empty {
       text-align: center;
-      padding: 16px 0;
+      padding: 12px 0;
       font-size: 12px;
       color: rgba(255, 255, 255, 0.35);
     }
@@ -600,13 +575,13 @@ $accent-red: #c45c48;
     .jobs-list {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 4px;
 
       .job-item {
         display: flex;
         align-items: center;
-        gap: 10px;
-        padding: 10px 12px;
+        gap: 8px;
+        padding: 8px 8px;
         border-radius: 6px;
         cursor: pointer;
         transition: background 0.2s;
@@ -616,15 +591,15 @@ $accent-red: #c45c48;
         }
 
         .job-score-badge {
-          width: 28px;
-          height: 28px;
+          width: 24px;
+          height: 24px;
           flex-shrink: 0;
           display: flex;
           align-items: center;
           justify-content: center;
-          background: rgba(196, 92, 72, 0.15);
-          color: $accent-red;
-          font-size: 11px;
+          background: $accent-blue-light;
+          color: #93c5fd;
+          font-size: 10px;
           font-weight: 700;
           border-radius: 6px;
         }
@@ -634,7 +609,7 @@ $accent-red: #c45c48;
           min-width: 0;
 
           .job-title {
-            font-size: 13px;
+            font-size: 12px;
             color: rgba(255, 255, 255, 0.85);
             font-weight: 500;
             overflow: hidden;
@@ -644,14 +619,35 @@ $accent-red: #c45c48;
 
           .job-company {
             font-size: 11px;
-            color: rgba(255, 255, 255, 0.4);
+            color: rgba(255, 255, 255, 0.35);
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            margin-top: 2px;
+            margin-top: 1px;
           }
         }
       }
+    }
+
+    .jobs-view-all-inline {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 8px;
+      margin-top: 4px;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.45);
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.2s;
+
+      &:hover {
+        color: #93c5fd;
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      .el-icon { font-size: 11px; }
     }
   }
 
@@ -714,7 +710,7 @@ $accent-red: #c45c48;
       background: rgba(255, 255, 255, 0.08);
 
       .nav-icon {
-        background: rgba(139, 26, 26, 0.8);
+        background: rgba(59, 130, 246, 0.8);
       }
 
       &::before {
@@ -725,7 +721,7 @@ $accent-red: #c45c48;
         transform: translateY(-50%);
         width: 3px;
         height: 24px;
-        background: $accent-red;
+        background: #3b82f6;
         border-radius: 0 2px 2px 0;
       }
     }
@@ -761,7 +757,7 @@ $accent-red: #c45c48;
       width: 36px;
       height: 36px;
       border-radius: 50%;
-      background: linear-gradient(135deg, $ink-light 0%, $ink-mid 100%);
+      background: linear-gradient(135deg, $navy-light 0%, $navy-deep 100%);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -808,7 +804,7 @@ $accent-red: #c45c48;
     .logout-ink {
       position: absolute;
       inset: 0;
-      background: rgba(139, 26, 26, 0.2);
+      background: rgba(59, 130, 246, 0.2);
       opacity: 0;
       transition: opacity 0.3s ease;
     }
@@ -820,7 +816,7 @@ $accent-red: #c45c48;
 
     &:hover {
       color: $paper-white;
-      border-color: rgba(139, 26, 26, 0.5);
+      border-color: rgba(59, 130, 246, 0.5);
 
       .logout-ink {
         opacity: 1;

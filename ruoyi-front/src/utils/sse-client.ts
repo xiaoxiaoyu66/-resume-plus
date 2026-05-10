@@ -176,6 +176,11 @@ class SseChatClient {
             }).catch(error => {
               if (error.name === 'AbortError') {
                 console.log('SSE connection aborted');
+                resolve({
+                  success: false,
+                  content: fullContent,
+                  aborted: true,
+                });
               } else {
                 console.error('SSE read error:', error);
                 this.onError(error.message);

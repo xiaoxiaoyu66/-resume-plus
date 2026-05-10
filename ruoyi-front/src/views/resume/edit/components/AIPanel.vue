@@ -24,9 +24,22 @@
         </template>
 
         <template v-if="clinicLoading">
-          <div class="loading-state">
-            <el-icon class="is-loading" :size="24"><Loading /></el-icon>
-            <span>AI 诊断中...</span>
+          <div class="loading-skeleton">
+            <div class="skeleton-steps">
+              <div
+                v-for="(step, i) in diagnosisSteps"
+                :key="i"
+                class="skeleton-step"
+                :style="{ '--i': i }"
+              >
+                <span class="step-icon">
+                  <el-icon v-if="i < diagnosisSteps.length - 1"><Loading /></el-icon>
+                  <el-icon v-else><MagicStick /></el-icon>
+                </span>
+                <span class="step-text">{{ step }}</span>
+                <span class="step-bar" />
+              </div>
+            </div>
           </div>
         </template>
 
@@ -38,14 +51,19 @@
               待改进
             </h4>
             <ul class="missing-list">
-              <li v-for="(item, i) in clinicResult.missing" :key="i">{{ item }}</li>
+              <li
+                v-for="(item, i) in clinicResult.missing"
+                :key="i"
+                :class="{ clickable: !!guessMissingModule(item), 'is-active': activeSection && guessMissingModule(item) === activeSection.module && activeSection.index === undefined }"
+                @click="guessMissingModule(item) && emit('focus-section', { module: guessMissingModule(item)! })"
+              >{{ item }}</li>
             </ul>
           </div>
 
           <!-- AI生成 -->
           <div v-if="clinicResult.generated" class="panel-section">
             <h4 class="section-title primary">
-              <el-icon color="#409eff"><MagicStick /></el-icon>
+              <el-icon color="#2563eb"><MagicStick /></el-icon>
               AI 生成
             </h4>
             <div v-if="clinicResult.generated.evaluation" class="gen-block">
@@ -83,10 +101,10 @@
           <!-- 优化建议 -->
           <div v-if="clinicResult.projectTips?.length" class="panel-section">
             <h4 class="section-title success">
-              <el-icon color="#67c23a"><EditPen /></el-icon>
+              <el-icon color="#10b981"><EditPen /></el-icon>
               优化建议
             </h4>
-            <div v-for="(tip, i) in clinicResult.projectTips" :key="i" class="tip-card">
+            <div v-for="(tip, i) in clinicResult.projectTips" :key="i" class="tip-card" :class="{ 'is-active': isActiveSection(tip.module, tip.index) }" @click="emit('focus-section', { module: tip.module, index: tip.index })">
               <div class="tip-header">
                 <span class="tip-badge">{{ tip.module === 'experience' ? '经历' : '项目' }} #{{ Number(tip.index) + 1 }}</span>
               </div>
@@ -165,7 +183,7 @@
           <!-- 追问记录 -->
           <div v-if="followUpMessages.length > 0" class="panel-section">
             <h4 class="section-title">
-              <el-icon color="#909399"><ChatLineSquare /></el-icon>
+              <el-icon color="#93c5fd"><ChatLineSquare /></el-icon>
               追问记录
             </h4>
             <div class="followup-list">
@@ -204,7 +222,7 @@
     <!-- ============ 面试模式 ============ -->
     <div v-if="activeTab === 'interview'" class="tab-body">
       <div v-if="!interviewActive" class="interview-start">
-        <el-icon :size="36" color="#409eff"><Mic /></el-icon>
+        <el-icon :size="36" color="#2563eb"><Mic /></el-icon>
         <h3>AI 面试模拟</h3>
         <p>基于当前简历内容，选择面试类型开始模拟面试。</p>
         <div class="interview-mode-buttons">
@@ -214,7 +232,7 @@
             :disabled="interviewStarting"
             @click="startInterview('hr')"
           >
-            👥 HR 行为面试
+            HR 行为面试
           </el-button>
           <el-button
             type="success"
@@ -222,7 +240,7 @@
             :disabled="interviewStarting"
             @click="startInterview('pro')"
           >
-            💼 专业面试
+            专业面试
           </el-button>
         </div>
         <p class="interview-hint">HR面关注稳定性、职业规划、软素质；专业面按目标岗位出专业题。</p>
@@ -232,7 +250,7 @@
       <div v-if="interviewActive" class="interview-chat">
         <div class="interview-mode-badge">
           <el-tag :type="interviewMode === 'hr' ? 'primary' : 'success'" size="small">
-            {{ interviewMode === 'hr' ? '👥 HR 行为面试' : '💼 专业面试' }}
+            {{ interviewMode === 'hr' ? 'HR 行为面试' : '专业面试' }}
           </el-tag>
           <el-button size="small" text @click="endInterview">结束面试</el-button>
         </div>
@@ -360,13 +378,43 @@ import SseChatClient from '@/utils/sse-client'
 const props = defineProps<{
   clinicResult: any
   clinicLoading: boolean
+  activeSection?: { module: string; index?: number } | null
 }>()
 
 const emit = defineEmits<{
   're-diagnose': []
+  'focus-section': [payload: { module: string; index?: number }]
 }>()
 
 const resumeStore = useResumeStore()
+
+const diagnosisSteps = ['读取简历内容', '检查模块完整性', '分析项目描述', '生成优化建议', '完成']
+
+/** Check if a given section is currently focused/active */
+function isActiveSection(mod: string, idx?: number): boolean {
+  if (!props.activeSection) return false
+  return props.activeSection.module === mod && props.activeSection.index === idx
+}
+
+/** Try to guess which module a missing-item text refers to */
+function guessMissingModule(text: string): string | null {
+  const kw: [string, string][] = [
+    ['基本信息', 'baseInfo'], ['姓名', 'baseInfo'], ['电话', 'baseInfo'], ['邮箱', 'baseInfo'],
+    ['教育', 'education'],
+    ['工作', 'experience'], ['经历', 'experience'],
+    ['项目', 'projects'],
+    ['技能', 'skills'],
+    ['评价', 'evaluation'], ['自我', 'evaluation'],
+    ['意向', 'intention'], ['期望', 'intention'],
+    ['奖项', 'awards'], ['荣誉', 'awards'],
+    ['证书', 'certificates'],
+    ['校园', 'campus']
+  ]
+  for (const [keyword, module] of kw) {
+    if (text.includes(keyword)) return module
+  }
+  return null
+}
 
 /** 已应用字段标记 */
 const appliedFields = reactive<Record<string, boolean>>({})
@@ -752,12 +800,14 @@ function sendInterviewMessage() {
   flex-direction: column;
   height: 100%;
   background: #fff;
+  border-radius: 10px;
 }
 
 .ai-tabs {
   display: flex;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid rgba(37, 99, 235, 0.08);
   flex-shrink: 0;
+  padding: 0 4px;
 }
 
 .ai-tab {
@@ -771,13 +821,14 @@ function sendInterviewMessage() {
   background: none;
   cursor: pointer;
   font-size: 13px;
-  color: #888;
+  color: #93c5fd;
   transition: all 0.2s;
   border-bottom: 2px solid transparent;
+  border-radius: 8px 8px 0 0;
 }
 
-.ai-tab:hover { color: #409eff; background: #f5f8ff; }
-.ai-tab.active { color: #409eff; border-bottom-color: #409eff; font-weight: 600; }
+.ai-tab:hover { color: #2563eb; background: #f0f7ff; }
+.ai-tab.active { color: #1d4ed8; border-bottom-color: #2563eb; font-weight: 600; }
 
 .tab-body {
   flex: 1;
@@ -817,7 +868,7 @@ function sendInterviewMessage() {
 .followup-input-bar {
   flex-shrink: 0;
   padding: 8px 12px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid rgba(37, 99, 235, 0.08);
 }
 .followup-list {
   display: flex;
@@ -844,8 +895,8 @@ function sendInterviewMessage() {
   margin: 0 0 8px;
 }
 .section-title.warn { color: #e6a23c; }
-.section-title.primary { color: #409eff; }
-.section-title.success { color: #67c23a; }
+.section-title.primary { color: #2563eb; }
+.section-title.success { color: #10b981; }
 
 .missing-list {
   padding-left: 18px;
@@ -855,10 +906,29 @@ function sendInterviewMessage() {
   line-height: 1.8;
 }
 
+.missing-list li.clickable {
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  border-radius: 4px;
+  padding: 1px 4px;
+  margin: 0 -4px;
+}
+
+.missing-list li.clickable:hover {
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.06);
+}
+
+.missing-list li.is-active {
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.10);
+  font-weight: 500;
+}
+
 .gen-block {
-  background: #f8faff;
-  border: 1px solid #e8f0fe;
-  border-radius: 6px;
+  background: #f0f7ff;
+  border: 1px solid rgba(37, 99, 235, 0.10);
+  border-radius: 8px;
   padding: 8px 12px;
   margin-bottom: 8px;
 }
@@ -866,7 +936,7 @@ function sendInterviewMessage() {
 .gen-label {
   font-size: 12px;
   font-weight: 600;
-  color: #409eff;
+  color: #2563eb;
   margin-bottom: 4px;
 }
 
@@ -884,11 +954,24 @@ function sendInterviewMessage() {
 }
 
 .tip-card {
-  background: #f6ffed;
-  border: 1px solid #d9f7be;
-  border-radius: 6px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 8px;
   padding: 8px 12px;
   margin-bottom: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.tip-card:hover {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.10);
+}
+
+.tip-card.is-active {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18);
+  background: #f0f7ff;
 }
 
 .tip-header {
@@ -897,7 +980,7 @@ function sendInterviewMessage() {
 
 .tip-badge {
   display: inline-block;
-  background: #52c41a;
+  background: #10b981;
   color: #fff;
   font-size: 11px;
   padding: 1px 8px;
@@ -925,7 +1008,7 @@ function sendInterviewMessage() {
 
 /* 岗位深化诊断 */
 .deepen-section {
-  border-top: 1px dashed #e0e0e0;
+  border-top: 1px dashed rgba(37, 99, 235, 0.12);
   padding-top: 12px;
   margin-top: 4px;
 }
@@ -953,7 +1036,7 @@ function sendInterviewMessage() {
   font-size: 13px;
 }
 .deepen-hint {
-  color: #999;
+  color: #93c5fd;
 }
 
 .loading-state {
@@ -963,8 +1046,84 @@ function sendInterviewMessage() {
   justify-content: center;
   padding: 40px 0;
   gap: 12px;
-  color: #999;
+  color: #93c5fd;
   font-size: 14px;
+}
+
+/* 诊断骨架屏 */
+.loading-skeleton {
+  padding: 40px 20px;
+}
+.skeleton-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.skeleton-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  opacity: 0.2;
+  animation: step-appear 0.4s ease forwards;
+  animation-delay: calc(var(--i) * 1.2s);
+}
+@keyframes step-appear {
+  to { opacity: 1; }
+}
+.skeleton-step .step-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+  background: #e0e7ff;
+  color: #2563eb;
+}
+.skeleton-step:nth-child(-n+4) .step-icon .el-icon {
+  animation: step-spin 1s linear infinite;
+}
+@keyframes step-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.skeleton-step:last-child .step-icon {
+  background: #d1fae5;
+  color: #10b981;
+}
+.skeleton-step:last-child {
+  animation-delay: 4.8s;
+}
+.step-text {
+  font-size: 13px;
+  color: #475569;
+  font-weight: 500;
+}
+.step-bar {
+  flex: 1;
+  height: 2px;
+  background: #e2e8f0;
+  border-radius: 1px;
+  overflow: hidden;
+  position: relative;
+  max-width: 80px;
+}
+.step-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, #2563eb, #3b82f6);
+  border-radius: 1px;
+  animation: bar-fill 1s ease forwards;
+  animation-delay: calc(var(--i) * 1.2s + 0.4s);
+}
+@keyframes bar-fill {
+  to { width: 100%; }
 }
 
 /* 消息对话（追问 / 面试共用） */
@@ -995,14 +1154,14 @@ function sendInterviewMessage() {
 }
 
 .chat-msg.user .msg-content {
-  background: #409eff;
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
   color: #fff;
   border-bottom-right-radius: 4px;
 }
 
 .chat-msg.ai .msg-content {
-  background: #f0f0f0;
-  color: #333;
+  background: #f0f7ff;
+  color: #0f172a;
   border-bottom-left-radius: 4px;
 }
 
@@ -1011,14 +1170,14 @@ function sendInterviewMessage() {
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  color: #999;
+  color: #93c5fd;
   font-size: 13px;
 }
 
 .chat-input-bar {
   flex-shrink: 0;
   padding: 8px 12px 0;
-  border-top: 1px solid #eee;
+  border-top: 1px solid rgba(37, 99, 235, 0.08);
 }
 
 /* 面试 */
@@ -1043,19 +1202,19 @@ function sendInterviewMessage() {
 .interview-start h3 {
   margin: 8px 0 0;
   font-size: 16px;
-  color: #333;
+  color: #1e40af;
 }
 
 .interview-start p {
   font-size: 13px;
-  color: #666;
+  color: #6b7280;
   line-height: 1.6;
   margin: 0;
   max-width: 280px;
 }
 
 .interview-hint {
-  color: #999;
+  color: #93c5fd;
   font-size: 12px;
 }
 
@@ -1070,7 +1229,7 @@ function sendInterviewMessage() {
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid rgba(37, 99, 235, 0.08);
 }
 
 /* 岗位匹配 */
@@ -1082,7 +1241,7 @@ function sendInterviewMessage() {
 }
 .match-count {
   font-size: 13px;
-  color: #666;
+  color: #6b7280;
 }
 .match-list {
   display: flex;
@@ -1093,14 +1252,15 @@ function sendInterviewMessage() {
   display: flex;
   gap: 10px;
   padding: 10px 12px;
-  background: #f8faff;
-  border: 1px solid #e8f0fe;
+  background: #f0f7ff;
+  border: 1px solid rgba(37, 99, 235, 0.08);
   border-radius: 8px;
   cursor: default;
-  transition: box-shadow 0.2s;
+  transition: box-shadow 0.2s, border-color 0.2s;
 }
 .match-card:hover {
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.12);
+  border-color: rgba(37, 99, 235, 0.18);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.10);
 }
 .match-score-col {
   flex-shrink: 0;
@@ -1119,12 +1279,12 @@ function sendInterviewMessage() {
 }
 .ring-bg {
   fill: none;
-  stroke: #eee;
+  stroke: #dbeafe;
   stroke-width: 3;
 }
 .ring-fill {
   fill: none;
-  stroke: #409eff;
+  stroke: #2563eb;
   stroke-width: 3;
   stroke-linecap: round;
   transition: stroke-dasharray 0.5s ease;
@@ -1136,7 +1296,7 @@ function sendInterviewMessage() {
   transform: translate(-50%, -50%);
   font-size: 10px;
   font-weight: 700;
-  color: #409eff;
+  color: #2563eb;
 }
 .match-info {
   flex: 1;
@@ -1145,23 +1305,23 @@ function sendInterviewMessage() {
 .match-title {
   font-size: 14px;
   font-weight: 600;
-  color: #333;
+  color: #0f172a;
   margin-bottom: 2px;
 }
 .match-company {
   font-size: 12px;
-  color: #888;
+  color: #6b7280;
   margin-bottom: 4px;
 }
 .match-meta {
   display: flex;
   gap: 8px;
   font-size: 12px;
-  color: #999;
+  color: #6b7280;
   margin-bottom: 6px;
 }
 .match-salary {
-  color: #67c23a;
+  color: #10b981;
   font-weight: 600;
 }
 .match-tags {

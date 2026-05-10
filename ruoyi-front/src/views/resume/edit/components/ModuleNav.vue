@@ -142,19 +142,21 @@ const addEntry = (key: string) => {
 .module-nav {
   width: 180px;
   flex-shrink: 0;
-  background: #fff;
-  border-right: 1px solid #e0e0e0;
+  background: #ffffff;
+  border-right: 1px solid rgba(37, 99, 235, 0.08);
   padding: 16px 0;
   overflow-y: auto;
 }
 
 .nav-header {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
-  color: #333;
+  color: #93c5fd;
   padding: 0 16px 12px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid rgba(37, 99, 235, 0.08);
   margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .nav-list {
@@ -165,20 +167,23 @@ const addEntry = (key: string) => {
   display: flex;
   align-items: center;
   padding: 8px 8px;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s, color 0.2s;
   gap: 6px;
   user-select: none;
+  color: #6b7280;
 }
 
 .nav-item:hover {
-  background: #f0f0f0;
+  background: #f0f7ff;
+  color: #2563eb;
 }
 
 .nav-item.active {
-  background: #e6f2ff;
-  color: #409eff;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 500;
 }
 
 .nav-item.dragging {
@@ -186,13 +191,13 @@ const addEntry = (key: string) => {
 }
 
 .nav-item.drag-over {
-  border-top: 2px solid #409eff;
+  border-top: 2px solid #2563eb;
   background: #f0f7ff;
 }
 
 .drag-handle {
   cursor: grab;
-  color: #bbb;
+  color: #bfdbfe;
   display: flex;
   align-items: center;
   font-size: 14px;
@@ -200,7 +205,7 @@ const addEntry = (key: string) => {
 }
 
 .drag-handle:hover {
-  color: #409eff;
+  color: #2563eb;
 }
 
 .nav-item:active .drag-handle {
@@ -211,12 +216,12 @@ const addEntry = (key: string) => {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #ccc;
+  background: #dbeafe;
   flex-shrink: 0;
 }
 
 .nav-dot.is-visible {
-  background: #67c23a;
+  background: #10b981;
 }
 
 .nav-label {
@@ -236,22 +241,22 @@ const addEntry = (key: string) => {
 
 .add-icon {
   font-size: 13px;
-  color: #bbb;
+  color: #bfdbfe;
   cursor: pointer;
 }
 
 .add-icon:hover {
-  color: #67c23a;
+  color: #10b981;
 }
 
 .eye-icon {
   font-size: 14px;
-  color: #999;
+  color: #bfdbfe;
   cursor: pointer;
   flex-shrink: 0;
 }
 
 .eye-icon:hover {
-  color: #409eff;
+  color: #2563eb;
 }
 </style>

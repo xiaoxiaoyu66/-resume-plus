@@ -73,6 +73,16 @@ export function exportResumeWord(data: Record<string, unknown>) {
   })
 }
 
+export function exportResumeWordFromHtml(data: Record<string, unknown>) {
+  return request({
+    url: '/resume/export/word-from-html',
+    method: 'post',
+    data,
+    responseType: 'blob',
+    timeout: 60000
+  })
+}
+
 export function parseResumeFile(file: File) {
   const formData = new FormData()
   formData.append('file', file)

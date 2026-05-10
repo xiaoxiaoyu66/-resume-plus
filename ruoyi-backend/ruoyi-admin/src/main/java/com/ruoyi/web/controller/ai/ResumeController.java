@@ -638,7 +638,113 @@ public class ResumeController extends BaseController {
     }
 
     /**
-     * 导出 Word - 接收简历 JSON 内容，服务端生成 .docx 文件
+     * 导出 Word（HTML→docx）- 接收前端采集的 HTML，经 LibreOffice 渲染后返回 docx
+     * <p>
+     * 优先使用 LibreOffice 命令行转换（排版与预览一致），
+     * 若 LibreOffice 不可用则回退到 POI 兜底生成。
+     */
+    @PostMapping("/export/word-from-html")
+    public void exportWordFromHtml(@RequestBody Map<String, String> params, HttpServletResponse response) throws Exception {
+        String html = params.get("html");
+        if (html == null || html.isEmpty()) {
+            response.setStatus(400);
+            response.getWriter().write("缺少 html 参数");
+            return;
+        }
+
+        log.info("导出Word(HTML→docx), HTML长度: {}", html.length());
+
+        // 创建临时文件
+        java.io.File tempDir = new java.io.File(System.getProperty("java.io.tmpdir"), "resume-export-" + System.currentTimeMillis());
+        tempDir.mkdirs();
+        java.io.File htmlFile = new java.io.File(tempDir, "resume.html");
+        java.io.File docxFile = new java.io.File(tempDir, "resume.docx");
+
+        try {
+            // 写 HTML 到临时文件（UTF-8）
+            java.nio.file.Files.writeString(htmlFile.toPath(), html, StandardCharsets.UTF_8);
+
+            // 尝试 LibreOffice 转换
+            boolean libreOfficeOk = false;
+            try {
+                ProcessBuilder pb = new ProcessBuilder(
+                        "libreoffice", "--headless", "--convert-to", "docx",
+                        "--outdir", tempDir.getAbsolutePath(),
+                        htmlFile.getAbsolutePath()
+                );
+                pb.redirectErrorStream(true);
+                Process process = pb.start();
+                boolean finished = process.waitFor(30, java.util.concurrent.TimeUnit.SECONDS);
+                if (finished && process.exitValue() == 0 && docxFile.exists() && docxFile.length() > 0) {
+                    libreOfficeOk = true;
+                } else {
+                    log.warn("LibreOffice 转换失败或无输出, exitCode={}, docxExists={}",
+                            finished ? process.exitValue() : -1, docxFile.exists());
+                }
+            } catch (Exception e) {
+                log.warn("LibreOffice 不可用或执行异常: {}", e.getMessage());
+            }
+
+            if (libreOfficeOk) {
+                // 返回 LibreOffice 生成的 docx
+                byte[] docxBytes = java.nio.file.Files.readAllBytes(docxFile.toPath());
+                response.setContentType("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+                response.setHeader("Content-Disposition", "attachment; filename=resume.docx");
+                response.setContentLength(docxBytes.length);
+                response.getOutputStream().write(docxBytes);
+            } else {
+                // 回退：POI 兜底 — 从 HTML 里提取文本生成简单 docx
+                log.info("LibreOffice 不可用，回退到 POI 兜底生成 Word");
+                fallbackWordExport(html, response);
+            }
+
+        } finally {
+            // 清理临时文件
+            deleteQuietly(tempDir);
+        }
+    }
+
+    /**
+     * POI 兜底 — 从 HTML 中提取纯文本生成简单 docx
+     */
+    private void fallbackWordExport(String html, HttpServletResponse response) throws Exception {
+        // 用极简 HTML 解析提取 body 文本
+        String text = html.replaceAll("(?s)<style[^>]*>.*?</style>", "")
+                .replaceAll("(?s)<script[^>]*>.*?</script>", "")
+                .replaceAll("<[^>]+>", " ")
+                .replaceAll("&nbsp;", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+
+        try (XWPFDocument doc = new XWPFDocument()) {
+            String[] lines = text.split("\n");
+            for (String line : lines) {
+                String trimmed = line.trim();
+                if (trimmed.isEmpty()) continue;
+                XWPFParagraph p = doc.createParagraph();
+                XWPFRun r = p.createRun();
+                r.setText(trimmed);
+                r.setFontSize(10);
+                r.setFontFamily("微软雅黑");
+            }
+            response.setContentType("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+            response.setHeader("Content-Disposition", "attachment; filename=resume.docx");
+            doc.write(response.getOutputStream());
+        }
+    }
+
+    /** 静默删除文件/目录 */
+    private void deleteQuietly(java.io.File f) {
+        if (f == null || !f.exists()) return;
+        java.io.File[] files = f.listFiles();
+        if (files != null) {
+            for (java.io.File child : files) deleteQuietly(child);
+        }
+        f.delete();
+    }
+
+    /**
+     * 导出 Word（POI） - 接收简历 JSON 内容，服务端生成 .docx 文件
      */
     @PostMapping("/export/word")
     @SuppressWarnings("unchecked")
