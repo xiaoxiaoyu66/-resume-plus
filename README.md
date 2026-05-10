@@ -46,7 +46,7 @@
 > 何二娃本是重庆的一名学生。何二娃 在一天热的摇裤儿打湿的下午，在哪里改简历。何二娃本来就懒，想到能不能有一个工具。我给它写要求就能直接帮我写简历，帮我匹配市面上适合我的岗位，最后在帮我投递。说白了就是懒！
 >
 
-**简历+** 是一个不知名学生利用课余时间独立开发的开源项目。基于 RuoYi v3.9.2 深度定制，聚焦中文简历解析与 AI 辅助诊断，将 **简历编辑 → AI 诊断 → PDF /Word导出 → 岗位匹配 → 面试辅导 → 投递** 串联成完整求职链路。
+**简历+** 是一个不知名学生利用课余时间独立开发的开源项目。基于 RuoYi v3.9.2 深度定制，聚焦中文简历解析与 AI 辅助诊断，将 **简历编辑 → AI 诊断 → PDF /Word导出 → 岗位匹配 （没想过这么复杂的这个。除了接官方api，只能爬虫实时更新而这个又违法）→ 面试辅导 → 投递** 串联成完整求职链路。
 
 > 作为学生项目，在工程规范上仍有提升空间!! 
 >
@@ -213,32 +213,74 @@
 ## 快速开始
 
 ### 环境要求
-- Docker 24+
-- Node.js 20 LTS
+- Docker 24+（可只装 MySQL/Redis，不需要 Docker 全部依赖）
+- Node.js 18+（推荐 20 LTS）
 - JDK 17+
-- Maven 3.9+
+- Maven 3.8+
 
 ### 启动
 
+以下是以本地开发环境（Windows/Linux/Mac）为例的完整启动步骤：
+
+#### 1. 启动依赖服务（Docker）
+
 ```bash
-# 1. 启动依赖服务（用虚拟机-kali拉镜像）
-docker compose up -d mysql redis postgres minio gotenberg
+# MySQL 8.0（业务数据库）
+docker run -d --name mysql -e MYSQL_ROOT_PASSWORD=root -p 3306:3306 mysql:8
 
-# 2. 配置环境变量（不要把你的key放入你的代码里!!!!!!）
-cp .env.example .env
-# 编辑 .env 填入你的 DeepSeek / MinIO / PGVector 密钥
+# Redis 7（缓存/会话）
+docker run -d --name redis -p 6379:6379 redis:7
 
-# 3. 启动后端
-cd ruoyi-backend
-mvn clean package -DskipTests
-java -jar ruoyi-admin/target/ruoyi-admin.jar
+# PostgreSQL + PGVector（向量检索，如不用岗位匹配可跳过）
+docker run -d --name postgres -e POSTGRES_PASSWORD=your-password -p 5433:5432 pgvector/pgvector:pg16
 
-# 4. 启动前端
-cd ruoyi-front
-npm install && npm run dev（若npm下载慢可以用cnpm）
+# MinIO（文件存储，可选—上传文件有 Redis 兜底）
+docker run -d --name minio -p 9000:9000 -p 9001:9001 minio/minio server /data --console-address ":9001"
+
+# Gotenberg（PDF 导出，可选—前端有 jsPDF 兜底）
+docker run -d --name gotenberg -p 3000:3000 gotenberg/gotenberg:8
 ```
 
-访问 `http://localhost:3000`，使用 `admin / admin123` 登录。如果是小白，可以直接把文件或者截图发给ai（Kimi/**DeepSeek**/千问/豆包）教你部署。
+#### 2. 初始化数据库
+
+```bash
+# 创建数据库 ry_ai 并导入表结构
+mysql -h 127.0.0.1 -u root -p < sql/resume_table.sql
+```
+
+#### 3. 配置环境变量
+
+后端通过环境变量读取密钥（Spring Boot `${VAR}` 语法），至少需要配置：
+
+```bash
+export DEEPSEEK_API_KEY=sk-your-key
+export MYSQL_PASSWORD=root
+export JWT_SECRET=$(openssl rand -base64 32)
+```
+
+完整变量见下方的 [环境变量参考](#环境变量参考)。Windows 用户推荐直接修改 `restart-back.bat` 填入密钥后双击运行，无需手动 export。
+
+#### 4. 启动后端
+
+```bash
+cd ruoyi-backend
+mvn spring-boot:run -DskipTests
+```
+
+> 首次运行需要下载 Maven 依赖，耗时 2-5 分钟。后端启动后监听 `http://localhost:8080`。
+
+#### 5. 启动前端
+
+```bash
+cd ruoyi-front
+npm install && npm run dev
+```
+
+> npm 下载慢可以换 cnpm：`npm install -g cnpm --registry=https://registry.npmmirror.com && cnpm install`
+
+#### 6. 访问
+
+打开 `http://localhost:3000`，使用 `admin / admin123` 登录。
 
 ---
 
