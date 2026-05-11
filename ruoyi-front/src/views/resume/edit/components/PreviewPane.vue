@@ -1,5 +1,5 @@
 <template>
-  <div class="preview-pane" ref="paneRef">
+  <div class="preview-pane" :class="{ 'edit-mode': props.editMode }" ref="paneRef" @click="onPreviewClick">
     <div class="a4-paper" id="resume-preview" :style="previewStyle">
       <component
         :is="currentTemplate"
@@ -45,10 +45,12 @@ interface Annotation {
 const props = defineProps<{
   annotations?: Annotation[]
   focusedSection?: { module: string; index?: number } | null
+  editMode?: boolean
 }>()
 
 const emit = defineEmits<{
   'section-click': [ann: Annotation]
+  'preview-module-click': [module: string]
 }>()
 
 const resumeStore = useResumeStore()
@@ -72,6 +74,7 @@ const previewStyle = computed(() => {
   if (s.lineHeight) vars['--resume-line-height'] = String(s.lineHeight)
   if (s.primaryColor) vars['--resume-primary'] = s.primaryColor
   if (s.color) vars['--resume-color'] = s.color
+  if (s.paperBackground) vars['--resume-paper'] = s.paperBackground
   return vars
 })
 
@@ -79,6 +82,20 @@ function getBadgePos(ann: Annotation) {
   const pos = badgePositions.value[ann.id]
   if (!pos) return { display: 'none' }
   return { top: pos.top + 'px', left: pos.left + 'px' }
+}
+
+/** Click on preview → find data-section ancestor and emit for form sync */
+function onPreviewClick(e: MouseEvent) {
+  if (!props.editMode) return
+  // Don't interfere with annotation clicks
+  if ((e.target as HTMLElement)?.closest?.('.ann-badge')) return
+  const sectionEl = (e.target as HTMLElement)?.closest?.('[data-section]') as HTMLElement | null
+  if (sectionEl) {
+    const module = sectionEl.dataset.section
+    if (module) {
+      emit('preview-module-click', module)
+    }
+  }
 }
 
 let resizeObserver: ResizeObserver | null = null
@@ -201,7 +218,7 @@ onUnmounted(() => {
 .a4-paper {
   width: 210mm;
   min-height: 297mm;
-  background: #fff;
+  background: var(--resume-paper, #fff);
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   padding: 20mm;
   box-sizing: border-box;
@@ -292,5 +309,39 @@ onUnmounted(() => {
 :deep(.section) {
   transition: box-shadow 0.3s ease;
   border-radius: 3px;
+}
+
+/* Edit mode: section hover cues */
+.preview-pane.edit-mode :deep([data-section]) {
+  position: relative;
+  cursor: pointer;
+  transition: outline 0.2s ease, background 0.2s ease;
+  outline: 2px solid transparent;
+  outline-offset: -1px;
+  border-radius: 4px;
+}
+.preview-pane.edit-mode :deep([data-section]:hover) {
+  outline-color: rgba(37, 99, 235, 0.3);
+  background: rgba(37, 99, 235, 0.02);
+}
+
+/* Edit mode indicator floating badge */
+.preview-pane.edit-mode::after {
+  content: '✎ 编辑模式';
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  font-size: 11px;
+  color: #2563eb;
+  background: rgba(255,255,255,0.92);
+  padding: 3px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  pointer-events: none;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
 }
 </style>

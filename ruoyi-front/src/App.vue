@@ -172,6 +172,8 @@ const jobsStore = useJobsStore()
 const isLoginPage = computed(() => route.path === '/login')
 const chatHistory = ref<any[]>([])
 const currentSessionId = ref(null)
+const newChatCounter = ref(0)
+provide('newChatCounter', newChatCounter)
 
 // 只显示最新的3条历史对话
 const recentHistory = computed(() => {
@@ -231,6 +233,7 @@ function goToChat(sessionId) {
 // 新建对话（点击 AI 助手）
 function goToNewChat() {
   currentSessionId.value = null
+  newChatCounter.value++
   router.push({
     path: '/chat'
   })

@@ -117,4 +117,4 @@ deepseek:
 
 # PDF 生成 — Gotenberg（Docker 内用 gotenberg:3000，本地测试用 localhost:3000）
 gotenberg:
-  url: http://192.168.132.136:3000
+  url: http://127.0.0.1:3000

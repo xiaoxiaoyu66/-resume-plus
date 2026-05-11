@@ -87,7 +87,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, onMounted, watch, onUnmounted, computed } from 'vue'
+import { ref, nextTick, onMounted, watch, onUnmounted, computed, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import FileUploadProgress from '@/components/FileUploadProgress.vue'
 import ChatSidebar from '@/views/chat/ChatSidebar.vue'
@@ -312,6 +312,14 @@ onUnmounted(() => {
 
 watch(() => route.query, async (newQuery) => {
   await handleRouteQuery(newQuery)
+})
+
+// 从 App.vue 接收"新建对话"信号（路由不变时强制重置）
+const newChatCounter = inject('newChatCounter', ref(0))
+watch(newChatCounter, () => {
+  resetChat()
+  hasResume.value = false
+  activeSessionId.value = null
 })
 </script>
 

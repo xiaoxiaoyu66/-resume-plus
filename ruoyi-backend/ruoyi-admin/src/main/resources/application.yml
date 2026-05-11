@@ -143,7 +143,7 @@ pgvector:
 
 # PDF 生成 — Gotenberg（Kali Docker 环境）
 gotenberg:
-  url: http://192.168.132.136:3000
+  url: http://127.0.0.1:3000
 
 # Embedding 服务配置 (使用 SiliconFlow API)
 embedding:

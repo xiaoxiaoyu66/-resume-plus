@@ -27,7 +27,8 @@ const defaultStyle: ResumeStyle = {
   fontSize: 12,
   lineHeight: 1.7,
   primaryColor: '',
-  color: ''
+  color: '',
+  paperBackground: ''
 }
 
 interface ResumeState {
@@ -162,6 +163,7 @@ export const useResumeStore = defineStore('resume', {
               if (!Array.isArray(e.courses)) e.courses = []
             })
           }
+          this.autoShowModules()
         }
         this.undoStack = []
         this.redoStack = []
@@ -197,6 +199,19 @@ export const useResumeStore = defineStore('resume', {
       if (Object.prototype.hasOwnProperty.call(this.moduleVisibility, module)) {
         this.moduleVisibility[module as ModuleKey] = !this.moduleVisibility[module as ModuleKey]
       }
+    },
+
+    /** 将有内容的模块自动设为可见（导入后调用） */
+    autoShowModules() {
+      const c = this.content
+      this.moduleVisibility.intention = !!c.intention?.position
+      this.moduleVisibility.experience = Array.isArray(c.experience) && c.experience.length > 0
+      this.moduleVisibility.campus = Array.isArray(c.campus) && c.campus.length > 0
+      this.moduleVisibility.projects = Array.isArray(c.projects) && c.projects.length > 0
+      this.moduleVisibility.awards = Array.isArray(c.awards) && c.awards.length > 0
+      this.moduleVisibility.certificates = Array.isArray(c.certificates) && c.certificates.length > 0
+      this.moduleVisibility.skills = Array.isArray(c.skills) && c.skills.length > 0
+      this.moduleVisibility.evaluation = !!c.evaluation
     },
 
     addArrayEntry(module: string) {

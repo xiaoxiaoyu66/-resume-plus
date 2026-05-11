@@ -1,9 +1,11 @@
 <template>
   <div class="module-nav">
     <div class="nav-header">模块导航</div>
+
+    <!-- 可见模块 -->
     <div class="nav-list">
       <div
-        v-for="(mod, index) in orderedModules"
+        v-for="(mod, index) in visibleModules"
         :key="mod.key"
         :draggable="true"
         class="nav-item"
@@ -22,12 +24,11 @@
         <span class="drag-handle">
           <el-icon><Rank /></el-icon>
         </span>
-        <span class="nav-dot" :class="{ 'is-visible': resumeStore.moduleVisibility[mod.key] }" />
         <span class="nav-label">{{ mod.label }}</span>
         <span class="nav-actions">
           <el-icon
             v-if="mod.arrayType"
-            class="add-icon"
+            class="icon-btn add-icon"
             title="添加条目"
             @click.stop="addEntry(mod.key)"
           >
@@ -35,11 +36,38 @@
           </el-icon>
           <el-icon
             v-if="mod.canHide"
-            class="eye-icon"
+            class="icon-btn eye-icon"
+            title="点击隐藏"
             @click.stop="toggleVisibility(mod.key)"
           >
-            <View v-if="resumeStore.moduleVisibility[mod.key]" />
-            <Hide v-else />
+            <View />
+          </el-icon>
+        </span>
+      </div>
+    </div>
+
+    <!-- 隐藏模块 -->
+    <div v-if="hiddenModules.length > 0" class="hidden-section">
+      <div class="hidden-header">
+        <span class="hidden-title">已隐藏</span>
+        <span class="hidden-count">{{ hiddenModules.length }}</span>
+      </div>
+      <div
+        v-for="mod in hiddenModules"
+        :key="mod.key"
+        class="nav-item hidden-item"
+        :class="{ active: activeModule === mod.key }"
+        @click="scrollToModule(mod.key)"
+      >
+        <span class="nav-label muted">{{ mod.label }}</span>
+        <span class="nav-actions">
+          <el-icon
+            v-if="mod.canHide"
+            class="icon-btn eye-icon show-icon"
+            title="点击显示"
+            @click.stop="toggleVisibility(mod.key)"
+          >
+            <Hide />
           </el-icon>
         </span>
       </div>
@@ -79,6 +107,14 @@ const orderedModules = computed(() => {
   return resumeStore.moduleOrder
     .map(key => moduleMeta[key])
     .filter(Boolean)
+})
+
+const visibleModules = computed(() => {
+  return orderedModules.value.filter(m => resumeStore.moduleVisibility[m.key] !== false)
+})
+
+const hiddenModules = computed(() => {
+  return orderedModules.value.filter(m => resumeStore.moduleVisibility[m.key] === false)
 })
 
 const draggingIndex = ref(-1)
@@ -146,6 +182,8 @@ const addEntry = (key: string) => {
   border-right: 1px solid rgba(37, 99, 235, 0.08);
   padding: 16px 0;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .nav-header {
@@ -157,6 +195,7 @@ const addEntry = (key: string) => {
   margin-bottom: 8px;
   text-transform: uppercase;
   letter-spacing: 1px;
+  flex-shrink: 0;
 }
 
 .nav-list {
@@ -212,24 +251,17 @@ const addEntry = (key: string) => {
   cursor: grabbing;
 }
 
-.nav-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #dbeafe;
-  flex-shrink: 0;
-}
-
-.nav-dot.is-visible {
-  background: #10b981;
-}
-
 .nav-label {
   flex: 1;
   font-size: 13px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.nav-label.muted {
+  color: #bbb;
+  text-decoration: line-through;
 }
 
 .nav-actions {
@@ -239,24 +271,82 @@ const addEntry = (key: string) => {
   flex-shrink: 0;
 }
 
-.add-icon {
-  font-size: 13px;
-  color: #bfdbfe;
+/* Unified icon button style */
+.icon-btn {
+  font-size: 15px;
   cursor: pointer;
+  transition: color 0.15s;
+  padding: 2px;
+  border-radius: 4px;
 }
 
+.add-icon {
+  color: #bfdbfe;
+}
 .add-icon:hover {
   color: #10b981;
+  background: rgba(16, 185, 129, 0.08);
 }
 
 .eye-icon {
-  font-size: 14px;
   color: #bfdbfe;
-  cursor: pointer;
-  flex-shrink: 0;
 }
-
 .eye-icon:hover {
   color: #2563eb;
+  background: rgba(37, 99, 235, 0.08);
+}
+
+/* "Show" icon (restore from hidden) */
+.show-icon {
+  color: #93c5fd;
+}
+.show-icon:hover {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.08);
+}
+
+/* ---- Hidden section ---- */
+.hidden-section {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1.5px dashed #e5e7eb;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.hidden-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px 6px;
+}
+
+.hidden-title {
+  font-size: 11px;
+  color: #bbb;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.hidden-count {
+  font-size: 10px;
+  color: #ccc;
+  background: #f5f5f5;
+  padding: 0 5px;
+  border-radius: 6px;
+  line-height: 16px;
+}
+
+.hidden-item {
+  opacity: 0.6;
+}
+.hidden-item:hover {
+  opacity: 1;
+  background: #fafafa;
+  color: #2563eb;
+}
+.hidden-item.active {
+  opacity: 1;
 }
 </style>

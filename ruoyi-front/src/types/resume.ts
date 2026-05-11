@@ -91,6 +91,7 @@ export interface ResumeStyle {
   lineHeight: number
   primaryColor: string
   color: string
+  paperBackground: string
 }
 
 export interface ResumeSnapshot {

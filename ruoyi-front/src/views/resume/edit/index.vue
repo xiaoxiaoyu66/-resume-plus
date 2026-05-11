@@ -8,7 +8,8 @@
           返回
         </el-button>
         <el-button text @click="showSidebar = !showSidebar" class="sidebar-toggle">
-          <el-icon><Operation /></el-icon>
+          <el-icon><View v-if="showSidebar" /><Hide v-else /></el-icon>
+          {{ showSidebar ? '隐藏编辑器' : '显示编辑器' }}
         </el-button>
         <span class="editor-title">简历编辑器</span>
       </div>
@@ -63,6 +64,31 @@
         <el-button size="small" @click="showJdDialog = true">
           <el-icon><Document /></el-icon>
           JD 适配
+        </el-button>
+        <!-- 主题色快速切换 -->
+        <div class="toolbar-theme-dots" v-if="showSidebar">
+          <div
+            v-for="t in toolbarThemes"
+            :key="t.id"
+            class="theme-dot"
+            :class="{ active: isToolbarThemeActive(t) }"
+            :style="{ background: t.primaryColor }"
+            :title="t.label"
+            @click="applyToolbarTheme(t)"
+          />
+        </div>
+
+        <el-button size="small" :icon="Brush" @click="showStylePanel = !showStylePanel">
+          样式
+        </el-button>
+
+        <el-button
+          size="small"
+          :type="editMode ? 'primary' : 'default'"
+          :icon="EditPen"
+          @click="editMode = !editMode"
+        >
+          {{ editMode ? '退出编辑' : '编辑预览' }}
         </el-button>
         <el-button type="primary" size="small" @click="handleExport" :disabled="showExportModal">
           导出 PDF/Word
@@ -131,7 +157,9 @@
           v-show="previewTab === 'preview'"
           :annotations="previewAnnotations"
           :focused-section="focusedSection"
+          :edit-mode="editMode"
           @section-click="onSectionClick"
+          @preview-module-click="onPreviewModuleClick"
         />
         <AIPanel
           v-show="previewTab === 'ai'"
@@ -148,7 +176,7 @@
     <ExportModal v-model="showExportModal" />
 
     <!-- 样式面板 -->
-    <StylePanel />
+    <StylePanel :visible="showStylePanel" @update:visible="showStylePanel = $event" />
 
     <!-- 撤回面板 -->
     <UndoPanel />
@@ -279,7 +307,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, Upload, Document, Loading, WarningFilled, MagicStick, EditPen, CircleCheck, Close, Operation, View, Promotion, ArrowDown, CopyDocument } from '@element-plus/icons-vue'
+import { ArrowLeft, Upload, Document, Loading, WarningFilled, MagicStick, EditPen, CircleCheck, Close, Operation, View, Hide, Promotion, ArrowDown, CopyDocument, Brush } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { parseResumeFile, aiResumeAction } from '@/api/resume'
 import { getProfile } from '@/api/profile'
@@ -301,6 +329,8 @@ const importInputRef = ref<HTMLElement | null>(null)
 const showSidebar = ref(false)
 const importStep = ref('')
 const importError = ref('')
+const editMode = ref(false)
+const showStylePanel = ref(false)
 
 // AI 面板（右侧切换）
 const previewTab = ref('preview')
@@ -396,6 +426,17 @@ function onSectionClick(ann: Annotation) {
   activeSection.value = { module: ann.module, index: ann.index }
   if (previewTab.value !== 'ai') {
     previewTab.value = 'ai'
+  }
+}
+
+/** 编辑模式下，点击预览区的模块 → 滚动 EditForm 到对应 section */
+function onPreviewModuleClick(module: string) {
+  const el = document.getElementById('section-' + module)
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    // 闪烁高亮
+    el.classList.add('section-highlight')
+    setTimeout(() => el.classList.remove('section-highlight'), 1500)
   }
 }
 
@@ -607,6 +648,26 @@ const goBack = () => {
   router.push('/resume')
 }
 
+// ====== 工具栏主题快速切换 ======
+const toolbarThemes = [
+  { id: 'ink',     label: '墨韵', primaryColor: '#1a365d', color: '#2c3e50' },
+  { id: 'cinnabar',label: '朱砂', primaryColor: '#8b1a1a', color: '#2c3e50' },
+  { id: 'blue',    label: '青花', primaryColor: '#1e40af', color: '#2c3e50' },
+  { id: 'green',   label: '竹青', primaryColor: '#2d6a4f', color: '#2c3e50' },
+  { id: 'gold',    label: '鎏金', primaryColor: '#b8860b', color: '#2c3e50' },
+  { id: 'rose',    label: '玫瑰', primaryColor: '#9d174d', color: '#2c3e50' },
+]
+
+function isToolbarThemeActive(t: typeof toolbarThemes[0]): boolean {
+  return resumeStore.style.primaryColor === t.primaryColor && resumeStore.style.color === t.color
+}
+
+function applyToolbarTheme(t: typeof toolbarThemes[0]) {
+  resumeStore.style.primaryColor = t.primaryColor
+  resumeStore.style.color = t.color
+  resumeStore.scheduleAutoSave()
+}
+
 /** Scroll to an edit form section (used by empty guide) */
 function scrollToSection(module: string) {
   const el = document.getElementById('section-' + module)
@@ -712,6 +773,7 @@ const onImportFile = async (e: Event) => {
 
     if (data && data.baseInfo) {
       Object.assign(resumeStore.content, data)
+	      resumeStore.autoShowModules()
       importStep.value = '导入完成 ✓'
       await new Promise(r => setTimeout(r, 800))
       ElMessage.success('导入成功，请检查并补充信息')
@@ -747,6 +809,7 @@ async function retryImport() {
 
     if (data && data.baseInfo) {
       Object.assign(resumeStore.content, data)
+	      resumeStore.autoShowModules()
       importStep.value = '导入完成 ✓'
       await new Promise(r => setTimeout(r, 800))
       ElMessage.success('导入成功，请检查并补充信息')
@@ -919,6 +982,34 @@ function closeJdDialog() {
 }
 .sidebar-toggle:hover {
   color: #2563eb;
+}
+
+/* 工具栏主题色圆点 */
+.toolbar-theme-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border-right: 1px solid #e2e8f0;
+  margin-right: 12px;
+}
+
+.theme-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2.5px solid transparent;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.06);
+}
+.theme-dot:hover {
+  transform: scale(1.2);
+}
+.theme-dot.active {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px #2563eb, 0 0 0 1px rgba(0,0,0,0.06);
 }
 
 .toolbar-right {
@@ -1115,6 +1206,18 @@ function closeJdDialog() {
 .resize-handle:hover,
 .resize-handle:active {
   background: rgba(37, 99, 235, 0.25);
+}
+
+/* 预览区点击定位到表单 section 时的闪烁高亮 */
+.edit-form-wrapper .section-highlight {
+  animation: form-highlight 1.5s ease;
+  border-radius: 8px;
+}
+
+@keyframes form-highlight {
+  0%   { box-shadow: inset 0 0 0 0 rgba(37, 99, 235, 0.15); }
+  50%  { box-shadow: inset 0 0 0 3px rgba(37, 99, 235, 0.12); }
+  100% { box-shadow: inset 0 0 0 0 rgba(37, 99, 235, 0); }
 }
 
 /* ── 模板选择器 ── */

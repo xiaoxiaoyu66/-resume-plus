@@ -56,20 +56,6 @@
         </div>
       </div>
 
-      <!-- 投递链接 -->
-      <div v-if="exportSuccess" class="job-links">
-        <p class="links-title">接下来，去这些地方投递：</p>
-        <div class="links-grid">
-          <el-button
-            v-for="site in jobSites"
-            :key="site.name"
-            size="default"
-            @click="openSite(site.url)"
-          >
-            {{ site.name }}
-          </el-button>
-        </div>
-      </div>
     </div>
 
     <!-- 投递链接 -->
@@ -108,6 +94,15 @@ const emit = defineEmits<{
 }>()
 
 const resumeStore = useResumeStore()
+
+const fileName = computed(() => {
+  const c = resumeStore.content
+  const name = c.baseInfo?.name || ''
+  const school = (Array.isArray(c.education) && c.education[0]?.school) || ''
+  const position = c.intention?.position || ''
+  const parts = [name, school, position].filter(Boolean)
+  return parts.length ? parts.join('-') : '简历'
+})
 
 const dialogVisible = computed({
   get: () => props.modelValue,
@@ -220,7 +215,7 @@ const generatePDF = async () => {
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = '简历.pdf'
+      link.download = fileName.value + '.pdf'
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
@@ -238,19 +233,27 @@ const generatePDF = async () => {
     const { default: html2canvas } = await import('html2canvas')
     const { default: jsPDF } = await import('jspdf')
 
+    // 先用较低 scale 试一次，捕获到 canvas 尺寸异常时降级
     const canvas = await html2canvas(preview, {
-      scale: 3,
+      scale: 2,
       useCORS: true,
       backgroundColor: '#ffffff',
       logging: false
     })
 
+    if (!canvas.width || !canvas.height) {
+      throw new Error('预览区域尺寸无效，请确保简历模板已渲染')
+    }
+
     const imgData = canvas.toDataURL('image/jpeg', 0.95)
     const pdf = new jsPDF('p', 'mm', 'a4')
     const pdfWidth = pdf.internal.pageSize.getWidth()
     const pdfHeight = (canvas.height * pdfWidth) / canvas.width
+    if (!isFinite(pdfHeight) || pdfHeight <= 0) {
+      throw new Error('计算 PDF 尺寸失败，请调整简历内容后重试')
+    }
     pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight)
-    pdf.save('简历.pdf')
+    pdf.save(fileName.value + '.pdf')
 
     exportSuccess.value = true
   } catch (e: any) {
@@ -273,7 +276,7 @@ const generateWord = async () => {
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = '简历.docx'
+    link.download = fileName.value + '.docx'
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -307,7 +310,7 @@ const generatePNG = async () => {
     })
 
     const link = document.createElement('a')
-    link.download = '简历.png'
+    link.download = fileName.value + '.png'
     link.href = canvas.toDataURL('image/png')
     link.click()
     exportSuccess.value = true
