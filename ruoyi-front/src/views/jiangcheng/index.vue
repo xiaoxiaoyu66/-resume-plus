@@ -231,7 +231,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { Search, Close } from '@element-plus/icons-vue'
 import { listJobs } from '@/api/jiangcheng'
@@ -329,14 +329,14 @@ const categories = [
 const locationOptions = ['渝北区', '渝中区', '两江新区', '南岸区', '九龙坡区', '沙坪坝区']
 
 /* ====== 岗位数据（从后端获取） ====== */
-const rawJobs = ref([])
+const rawJobs = ref<any[]>([])
 const typeMap = { school: '校招', social: '社招', intern: '实习', state: '国企' }
 
 // 从后端加载数据
 async function loadJobs() {
   loading.value = true
   try {
-    const params = {
+    const params: Record<string, any> = {
       pageNum: pageNum.value,
       pageSize: pageSize.value
     }
@@ -346,7 +346,7 @@ async function loadJobs() {
     if (filterSource.value === 'official') params.sourceType = 0
     else if (filterSource.value === 'commercial') params.sourceType = 1
 
-    const res = await listJobs(params)
+    const res: Record<string, any> = await listJobs(params)
     rawJobs.value = (res.rows || [])
     total.value = res.total || 0
   } catch (e) {

@@ -163,7 +163,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
@@ -192,7 +192,7 @@ const profile = ref(null)
 const profileLoading = ref(false)
 
 // 最近对话
-const recentChats = ref([])
+const recentChats = ref<any[]>([])
 
 // 计算额度百分比
 const quotaPercentage = computed(() => {
@@ -242,7 +242,7 @@ async function loadData() {
   userInfo.value = {
     phone: userStore.phonenumber || '',
     email: userStore.email || '',
-    createTime: userStore.createTime || new Date()
+    createTime: String(userStore.createTime || new Date())
   }
   console.log('UserInfo 设置后的 userInfo:', userInfo.value)
 
@@ -250,7 +250,7 @@ async function loadData() {
   profileLoading.value = true
   try {
     const res = await getProfile()
-    profile.value = res.data
+    profile.value = res.data as Record<string, any> | undefined
   } catch (e) {
     console.error('加载档案失败', e)
   } finally {
@@ -260,7 +260,7 @@ async function loadData() {
   // 加载最近对话
   try {
     const res = await listHistory()
-    recentChats.value = (res.data || []).slice(0, 5)
+    recentChats.value = ((res.data as any[]) || []).slice(0, 5)
   } catch (e) {
     console.error('加载对话失败', e)
   }
@@ -268,9 +268,10 @@ async function loadData() {
   // 加载额度信息
   try {
     const quotaRes = await getQuota()
-    if (quotaRes.data) {
-      quota.value.used = quotaRes.data.used || 0
-      quota.value.total = quotaRes.data.total || 50
+    const quotaData = quotaRes.data as Record<string, any> | undefined
+    if (quotaData) {
+      quota.value.used = quotaData.used || 0
+      quota.value.total = quotaData.total || 50
     }
   } catch (e) {
     console.error('加载额度信息失败', e)

@@ -2,13 +2,10 @@ package com.ruoyi.web.controller.ai;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
-
 /**
  * 微信开放平台配置
  */
 @Configuration
-@PropertySource("classpath:wx.properties")
 @ConfigurationProperties(prefix = "wx")
 public class WxConfig {
 

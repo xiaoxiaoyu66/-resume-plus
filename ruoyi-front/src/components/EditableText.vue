@@ -14,7 +14,7 @@
   >{{ displayText }}</span>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
 
 const props = defineProps({

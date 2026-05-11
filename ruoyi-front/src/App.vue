@@ -149,7 +149,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, ref, onMounted, watch, provide } from 'vue'
 import {
   ChatDotRound, ChatDotSquare, ChatLineRound, UserFilled, Document,
@@ -170,14 +170,14 @@ const userStore = useUserStore()
 const jobsStore = useJobsStore()
 
 const isLoginPage = computed(() => route.path === '/login')
-const chatHistory = ref([])
+const chatHistory = ref<any[]>([])
 const currentSessionId = ref(null)
 
 // 只显示最新的3条历史对话
 const recentHistory = computed(() => {
   // 按时间倒序排序，取前3条
   return [...chatHistory.value]
-    .sort((a, b) => new Date(b.createTime) - new Date(a.createTime))
+    .sort((a, b) => Number(new Date(b.createTime)) - Number(new Date(a.createTime)))
     .slice(0, 3)
 })
 
@@ -212,7 +212,7 @@ async function loadChatHistory() {
   }
   try {
     const res = await listHistory()
-    chatHistory.value = res.data || []
+    chatHistory.value = (res.data as any[]) || []
   } catch (e) {
     // 401错误已经在request拦截器中处理，这里不再处理
     console.error('加载历史对话失败', e)

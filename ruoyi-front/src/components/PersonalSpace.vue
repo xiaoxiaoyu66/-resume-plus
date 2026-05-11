@@ -178,7 +178,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { 
   User, ArrowRight, Document, Search, FolderOpened, 
@@ -205,7 +205,7 @@ const activeTab = ref('files')
 
 // 文件列表
 const loading = ref(false)
-const fileList = ref([])
+const fileList = ref<any[]>([])
 const pageNum = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
@@ -233,7 +233,7 @@ function close() {
 async function loadFileList() {
   loading.value = true
   try {
-    const params = {
+    const params: Record<string, any> = {
       pageNum: pageNum.value,
       pageSize: pageSize.value,
       timeRange: timeRange.value,
@@ -248,8 +248,9 @@ async function loadFileList() {
     
     const res = await listFiles(params)
     if (res.code === 200) {
-      fileList.value = res.data?.list || []
-      total.value = res.data?.total || 0
+      const data = res.data as Record<string, any> | undefined
+      fileList.value = data?.list || []
+      total.value = data?.total || 0
     }
   } catch (e) {
     console.error('加载文件列表失败', e)
@@ -312,7 +313,7 @@ async function downloadFile(file) {
   try {
     const res = await getFileUrl(file.fileName)
     if (res.code === 200 && res.data) {
-      window.open(res.data, '_blank')
+      window.open(res.data as string, '_blank')
     } else {
       ElMessage.error('获取文件链接失败')
     }
@@ -343,11 +344,11 @@ function formatFileSize(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
-function formatTime(time) {
+function formatTime(time: string | number | Date) {
   if (!time) return ''
   const date = new Date(time)
   const now = new Date()
-  const diff = now - date
+  const diff = Number(now) - Number(date)
   
   // 小于1小时显示相对时间
   if (diff < 3600000) {

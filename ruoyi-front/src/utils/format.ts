@@ -9,11 +9,15 @@ export function escapeHtml(text) {
 }
 
 /**
- * 当前时间 HH:mm
+ * 当前时间完整格式 YYYY-MM-DD HH:mm:ss（同时用于显示和日期分隔）
  */
 export function getCurrentTime() {
   const now = new Date()
+  const y = now.getFullYear()
+  const M = String(now.getMonth() + 1).padStart(2, '0')
+  const d = String(now.getDate()).padStart(2, '0')
   const h = String(now.getHours()).padStart(2, '0')
   const m = String(now.getMinutes()).padStart(2, '0')
-  return `${h}:${m}`
+  const s = String(now.getSeconds()).padStart(2, '0')
+  return `${y}-${M}-${d} ${h}:${m}:${s}`
 }

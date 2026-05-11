@@ -12,318 +12,87 @@
       @cancel="cancelUpload"
     />
 
-    <!-- 侧边栏 + 主区域 -->
     <div class="chat-layout">
       <!-- 侧边栏 -->
-      <aside class="chat-sidebar" :class="{ collapsed: !showSidebar }">
-        <div class="sidebar-body">
-          <!-- 加载中 -->
-          <div v-if="sessionsLoading" class="sidebar-loading">
-            <div class="sidebar-skeleton" v-for="n in 4" :key="n">
-              <div class="skeleton-line w-60"></div>
-              <div class="skeleton-line w-30"></div>
-            </div>
-          </div>
-
-          <!-- 空列表 -->
-          <div v-else-if="sessions.length === 0" class="sidebar-empty">
-            <p>暂无历史对话</p>
-          </div>
-
-          <!-- 会话列表 -->
-          <div v-else class="session-list">
-            <button
-              v-for="s in sessions"
-              :key="s.id"
-              :class="['session-item', { active: activeSessionId === s.id }]"
-              @click="selectSession(s.id)"
-            >
-              <div class="session-info">
-                <span class="session-title">{{ s.sessionTitle || '新对话' }}</span>
-                <span class="session-meta">
-                  <span class="session-scene">{{ sceneLabel(s.scene) }}</span>
-                  <span class="session-dot">·</span>
-                  <span class="session-time">{{ formatSessionTime(s.updateTime) }}</span>
-                </span>
-              </div>
-              <button
-                class="session-del"
-                title="删除"
-                @click.stop="deleteSession(s.id)"
-              >
-                <el-icon><Close /></el-icon>
-              </button>
-            </button>
-          </div>
-        </div>
-
-        <!-- 收起按钮 -->
-      </aside>
-
-      <button class="sidebar-toggle" @click="showSidebar = !showSidebar">
-        <span class="toggle-arrow">{{ showSidebar ? '◀' : '▶' }}</span>
-      </button>
+      <ChatSidebar
+        :sessions="sessions"
+        :sessions-loading="sessionsLoading"
+        :active-session-id="activeSessionId"
+        :show-sidebar="showSidebar"
+        @select-session="selectSession"
+        @delete-session="deleteSession"
+        @update:show-sidebar="showSidebar = $event"
+      />
 
       <!-- 主区域 -->
       <main class="chat-main">
-
-      <div v-if="loadingHistory" class="loading-history">
-        <el-icon class="loading-spin"><Loading /></el-icon>
-        <span>加载对话历史...</span>
-        <div v-if="loadingTimedOut" class="loading-timeout">
-          <span>加载时间过长，请检查网络后</span>
-          <el-button size="small" text @click="retryLoadHistory">重试</el-button>
-        </div>
-      </div>
-      <div v-else-if="!hasStarted" class="empty-state">
-      <!-- 简历+ Logo -->
-      <div class="logo-lishizhen">
-        <span class="logo-char" :class="{ 'typing': showChar1 }">简</span>
-        <span class="logo-char" :class="{ 'typing': showChar2 }">历</span>
-        <span class="logo-char logo-char-last" :class="{ 'typing': showChar3 }">+</span>
-      </div>
-
-      <div class="input-wrapper">
-        <div class="input-box input-box-empty">
-          <!-- 场景选择器 -->
-          <div class="scene-selector">
-            <button class="scene-trigger" @click="sceneMenuOpen = !sceneMenuOpen" @blur="closeSceneMenu">
-              <span class="scene-dot" :style="{ background: sceneColors[currentScene] }"></span>
-              <span class="scene-label">{{ sceneOptions.find(s => s.value === currentScene)?.label }}</span>
-              <span class="scene-arrow">▾</span>
-            </button>
-            <div v-if="sceneMenuOpen" class="scene-menu" @mousedown.prevent>
-              <button
-                v-for="s in sceneOptions"
-                :key="s.value"
-                :class="['scene-menu-item', { active: currentScene === s.value }]"
-                @click="switchScene(s.value); sceneMenuOpen = false"
-              >
-                <span class="scene-dot scene-dot-sm" :style="{ background: sceneColors[s.value] }"></span>
-                {{ s.label }}
-              </button>
-            </div>
-            <span v-if="hasResume" class="resume-pill" title="已关联简历">📄</span>
+        <!-- 空状态 -->
+        <div v-if="!hasStarted && !loadingHistory" class="empty-state">
+          <div class="logo-wrapper">
+            <span class="logo-char" :class="{ 'typing': showChar1 }">简</span>
+            <span class="logo-char" :class="{ 'typing': showChar2 }">历</span>
+            <span class="logo-char logo-char-last" :class="{ 'typing': showChar3 }">+</span>
           </div>
-
-          <!-- 已上传文件预览 -->
-          <div v-if="uploadedFiles.length > 0" class="uploaded-files">
-            <div v-for="(file, index) in uploadedFiles" :key="index" class="file-tag">
-              <el-icon><Document /></el-icon>
-              <span class="file-name">{{ file.originalName }}</span>
-              <el-icon class="remove-btn" @click="removeFile(index)"><Close /></el-icon>
-            </div>
-          </div>
-
-          <textarea
+          <ChatInputBar
             v-model="userInput"
-            :placeholder="uploadedFiles.length > 0 ? '输入问题，让简历+分析文件内容...' : '输入消息与简历+对话...'"
-            rows="3"
-            @keydown.enter.prevent="handleEnter"
+            v-model:scene-menu-open="sceneMenuOpen"
+            :uploaded-files="uploadedFiles"
+            :current-scene="currentScene"
+            :is-uploading="isUploading"
+            :is-thinking="isThinking"
+            :has-resume="hasResume"
+            :rows="3"
+            placeholder="输入消息与简历+对话..."
+            input-box-class="input-box-empty"
+            @send="sendMessage"
+            @cancel="cancelCurrentReply"
+            @remove-file="removeFile"
+            @switch-scene="switchScene"
+            @file-selected="onFileSelected"
           />
-          <div class="input-actions">
-            <div class="left-actions">
-              <!-- 文件上传按钮 -->
-              <input
-                ref="fileInput"
-                type="file"
-                style="display: none"
-                accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx,.md"
-                @change="handleFileSelect"
-              />
-              <button
-                class="action-btn action-btn-upload"
-                title="添加附件"
-                :disabled="isUploading"
-                @click="triggerFileUpload"
-              >
-                <el-icon v-if="isUploading"><Loading /></el-icon>
-                <el-icon v-else><Plus /></el-icon>
-                <span class="upload-btn-text">附件</span>
-              </button>
-              <span v-if="uploadedFiles.length > 0" class="file-count">{{ uploadedFiles.length }} 个文件</span>
-            </div>
-            <div class="right-actions">
-              <button
-                v-if="isThinking"
-                class="stop-btn"
-                @click="cancelCurrentReply"
-              >
-                <svg class="stop-icon" viewBox="0 0 16 16" fill="currentColor" width="14" height="14"><rect x="2" y="2" width="12" height="12" rx="2"/></svg>
-                <span>停止生成</span>
-              </button>
-              <button
-                v-else
-                class="send-btn"
-                :disabled="!userInput.trim() && uploadedFiles.length === 0"
-                @click="sendMessage"
-              >
-                <el-icon><Promotion /></el-icon>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-      </div>
-      <div v-else class="chat-container">
-      <!-- 消息列表 -->
-      <div class="message-list" ref="messageListRef">
-        <!-- 历史对话无消息时的提示 -->
-        <div v-if="messages.length === 0" class="history-empty-hint">
-          <p>暂无对话记录，发送消息开始对话</p>
-        </div>
-        <div
-          v-for="(msg, index) in messages"
-          :key="index"
-        >
-          <!-- 日期分隔 -->
-          <div v-if="shouldShowDateSeparator(index)" class="date-separator">
-            <span class="date-separator-text">{{ formatDateSeparator(msg) }}</span>
-          </div>
-          <div :class="['message-item', msg.role]">
-          <div class="message-avatar">
-            <div v-if="msg.role === 'ai'" class="avatar ai-avatar lishizhen-avatar">
-              <span class="avatar-char">简</span>
-            </div>
-            <div v-else class="avatar user-avatar">
-              <el-icon><UserFilled /></el-icon>
-            </div>
-          </div>
-          <div class="message-content">
-            <div class="message-bubble">
-              <template v-if="msg.role === 'ai'">
-                <MarkdownRenderer :content="msg.content" />
-              </template>
-              <template v-else>
-                {{ msg.content }}
-              </template>
-            </div>
-            <span class="message-time">{{ msg.time }}</span>
-          </div>
-        </div>
         </div>
 
-        <!-- 思考中 -->
-        <div v-if="isThinking" class="message-item ai thinking">
-          <div class="message-avatar">
-            <div class="avatar ai-avatar">
-              <span class="avatar-char">简</span>
-            </div>
-          </div>
-          <div class="message-content">
-            <div class="thinking-bubble">
-              <div class="thinking-steps">
-                <div class="thinking-step">
-                  <span class="step-dot active"></span>
-                  <span class="step-label">理解问题</span>
-                </div>
-                <div class="thinking-step">
-                  <span class="step-dot pulse"></span>
-                  <span class="step-label">分析中</span>
-                </div>
-                <div class="thinking-step">
-                  <span class="step-dot"></span>
-                  <span class="step-label">生成回答</span>
-                </div>
-              </div>
-              <span class="thinking-text">简历+ 思考中...</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 底部输入框 -->
-      <div class="bottom-input">
-        <div class="input-box">
-          <!-- 场景选择器 -->
-          <div class="scene-selector">
-            <button class="scene-trigger" @click="sceneMenuOpen = !sceneMenuOpen" @blur="closeSceneMenu">
-              <span class="scene-dot" :style="{ background: sceneColors[currentScene] }"></span>
-              <span class="scene-label">{{ sceneOptions.find(s => s.value === currentScene)?.label }}</span>
-              <span class="scene-arrow">▾</span>
-            </button>
-            <div v-if="sceneMenuOpen" class="scene-menu" @mousedown.prevent>
-              <button
-                v-for="s in sceneOptions"
-                :key="s.value"
-                :class="['scene-menu-item', { active: currentScene === s.value }]"
-                @click="switchScene(s.value); sceneMenuOpen = false"
-              >
-                <span class="scene-dot scene-dot-sm" :style="{ background: sceneColors[s.value] }"></span>
-                {{ s.label }}
-              </button>
-            </div>
-            <span v-if="hasResume" class="resume-pill" title="已关联简历">📄</span>
-          </div>
-
-          <!-- 已上传文件预览 -->
-          <div v-if="uploadedFiles.length > 0" class="uploaded-files">
-            <div v-for="(file, index) in uploadedFiles" :key="index" class="file-tag">
-              <el-icon><Document /></el-icon>
-              <span class="file-name">{{ file.originalName }}</span>
-              <el-icon class="remove-btn" @click="removeFile(index)"><Close /></el-icon>
-            </div>
-          </div>
-
-          <textarea
-            v-model="userInput"
-            :placeholder="uploadedFiles.length > 0 ? '输入问题，让简历+分析文件内容...' : '输入消息...'"
-            rows="2"
-            @keydown.enter.prevent="handleEnter"
+        <!-- 对话状态 -->
+        <div v-else class="chat-container">
+          <ChatMessageList
+            ref="messageListRef"
+            :messages="messages"
+            :is-thinking="isThinking"
+            :loading-history="loadingHistory"
+            :loading-timed-out="loadingTimedOut"
+            @retry="retryLoadHistory"
           />
-          <div class="input-actions">
-            <div class="left-actions">
-              <!-- 文件上传按钮 -->
-              <input
-                ref="fileInputBottom"
-                type="file"
-                style="display: none"
-                accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx,.md"
-                @change="handleFileSelect"
-              />
-              <button
-                class="action-btn action-btn-upload"
-                title="添加附件"
-                :disabled="isUploading"
-                @click="triggerFileUploadBottom"
-              >
-                <el-icon v-if="isUploading"><Loading /></el-icon>
-                <el-icon v-else><Plus /></el-icon>
-                <span class="upload-btn-text">附件</span>
-              </button>
-              <span v-if="uploadedFiles.length > 0" class="file-count">{{ uploadedFiles.length }} 个文件</span>
-            </div>
-            <button
-              v-if="isThinking"
-              class="stop-btn"
-              @click="cancelCurrentReply"
-            >
-              <el-icon><VideoPause /></el-icon>
-              <span>停止生成</span>
-            </button>
-            <button
-              v-else
-              class="send-btn"
-              :disabled="!userInput.trim() && uploadedFiles.length === 0"
-              @click="sendMessage"
-            >
-              <el-icon><Promotion /></el-icon>
-            </button>
+          <div class="bottom-input">
+            <ChatInputBar
+              v-model="userInput"
+              v-model:scene-menu-open="sceneMenuOpen"
+              :uploaded-files="uploadedFiles"
+              :current-scene="currentScene"
+              :is-uploading="isUploading"
+              :is-thinking="isThinking"
+              :has-resume="hasResume"
+              :rows="2"
+              placeholder="输入消息..."
+              @send="sendMessage"
+              @cancel="cancelCurrentReply"
+              @remove-file="removeFile"
+              @switch-scene="switchScene"
+              @file-selected="onFileSelected"
+            />
           </div>
         </div>
-      </div>
-      </div>
       </main>
     </div>
-</div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, onMounted, watch, onUnmounted } from 'vue'
+import { ref, nextTick, onMounted, watch, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Loading } from '@element-plus/icons-vue'
-import MarkdownRenderer from '@/components/MarkdownRenderer.vue'
 import FileUploadProgress from '@/components/FileUploadProgress.vue'
+import ChatSidebar from '@/views/chat/ChatSidebar.vue'
+import ChatMessageList from '@/views/chat/ChatMessageList.vue'
+import ChatInputBar from '@/views/chat/ChatInputBar.vue'
 import { useChatUpload } from '@/composables/useChatUpload'
 import { useChatSse } from '@/composables/useChatSse'
 import { useChatSession } from '@/composables/useChatSession'
@@ -333,113 +102,29 @@ import type { ChatMessage, ChatSessionItem, UploadedFile } from '@/types/chat'
 
 const route = useRoute()
 const router = useRouter()
+
+// ====== 对话状态 ======
 const userInput = ref('')
 const messages = ref<ChatMessage[]>([])
 const isThinking = ref(false)
 const hasStarted = ref(false)
-const messageListRef = ref<HTMLElement | null>(null)
 const currentSessionId = ref<string | null>(null)
-const hasResume = ref(false)
 const sceneMenuOpen = ref(false)
 
-function closeSceneMenu() {
-  setTimeout(() => { sceneMenuOpen.value = false }, 150)
-}
-
-const sceneOptions = [
-  { label: '综合', value: 'default' },
-  { label: '简历诊断', value: 'resume' },
-  { label: 'HR面试', value: 'interview-hr' },
-  { label: '专业面试', value: 'interview-pro' },
-  { label: '职业规划', value: 'career' },
-]
-
-const sceneColors: Record<string, string> = {
-  default: '#3b82f6',
-  resume: '#10b981',
-  'interview-hr': '#8b5cf6',
-  'interview-pro': '#f59e0b',
-  career: '#ec4899',
-}
-
+// ====== 场景 ======
 const currentScene = ref('default')
 
-function switchScene(scene: string) {
-  currentScene.value = scene
-  if (currentSessionId.value) {
-    updateSessionScene(currentSessionId.value, scene).catch(() => {})
-  }
-}
-
-const fileInput = ref<HTMLInputElement | null>(null)
-const fileInputBottom = ref<HTMLInputElement | null>(null)
+// ====== 文件上传 ======
 const uploadedFiles = ref<UploadedFile[]>([])
 const isUploading = ref(false)
 
-// 加载超时检测
-const loadingTimedOut = ref(false)
-let loadingTimer: ReturnType<typeof setTimeout> | null = null
-
-function startLoadingTimer() {
-  loadingTimedOut.value = false
-  loadingTimer = setTimeout(() => {
-    loadingTimedOut.value = true
-  }, 15000) // 15秒超时
-}
-
-function clearLoadingTimer() {
-  if (loadingTimer) {
-    clearTimeout(loadingTimer)
-    loadingTimer = null
-  }
-  loadingTimedOut.value = false
-}
-
-// 检测是否需要显示日期分隔
-function shouldShowDateSeparator(index: number): boolean {
-  if (index === 0) return true
-  const prev = messages.value[index - 1]
-  const curr = messages.value[index]
-  if (!prev || !curr) return false
-  const prevDate = new Date(prev.time || 0)
-  const currDate = new Date(curr.time || 0)
-  return prevDate.toDateString() !== currDate.toDateString()
-}
-
-function formatDateSeparator(msg: ChatMessage): string {
-  const d = new Date(msg.time || 0)
-  const now = new Date()
-  const yesterday = new Date(now)
-  yesterday.setDate(yesterday.getDate() - 1)
-
-  if (d.toDateString() === now.toDateString()) return '今天'
-  if (d.toDateString() === yesterday.toDateString()) return '昨天'
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}年${pad(d.getMonth() + 1)}月${pad(d.getDate())}日`
-}
-
-const showChar1 = ref(false)
-const showChar2 = ref(false)
-const showChar3 = ref(false)
-
-function startLogoAnimation() {
-  showChar1.value = true
-  setTimeout(() => { showChar2.value = true }, 300)
-  setTimeout(() => { showChar3.value = true }, 600)
-}
-
-function scrollToBottom() {
-  nextTick(() => {
-    if (messageListRef.value) {
-      messageListRef.value.scrollTop = messageListRef.value.scrollHeight
-    }
-  })
-}
-// 在内容可能还在异步渲染时多试一次
-function scrollToBottomDelayed() {
-  scrollToBottom()
-  setTimeout(() => scrollToBottom(), 100)
-}
+const upload = useChatUpload({
+  hasStarted,
+  uploadedFiles,
+  fileInput: ref(null),
+  fileInputBottom: ref(null),
+  isUploading,
+})
 
 const {
   showUploadProgress,
@@ -450,18 +135,20 @@ const {
   uploadedSize,
   remainingTime,
   handleFileFromSpace,
-  triggerFileUpload,
-  triggerFileUploadBottom,
-  handleFileSelect,
   cancelUpload,
-  removeFile
-} = useChatUpload({
-  hasStarted,
-  uploadedFiles,
-  fileInput,
-  fileInputBottom,
-  isUploading
-})
+  removeFile,
+} = upload
+
+// ChatInputBar 的 file-selected 事件 → 接入 composable 的文件上传逻辑
+function onFileSelected(files: FileList) {
+  ;(upload as any).handleFileSelect({ target: { files, value: '' } } as unknown as Event)
+}
+
+// ====== SSE 流式对话 ======
+const messageListRef = ref<InstanceType<typeof ChatMessageList> | null>(null)
+
+const scrollToBottom = () => messageListRef.value?.scrollToBottom()
+const scrollToBottomDelayed = () => messageListRef.value?.scrollToBottomDelayed()
 
 const { sendMessage, stopSse, cancelCurrentReply } = useChatSse({
   userInput,
@@ -473,9 +160,10 @@ const { sendMessage, stopSse, cancelCurrentReply } = useChatSse({
   scrollToBottom,
   escapeHtml,
   getCurrentTime,
-  currentScene
+  currentScene,
 })
 
+// ====== 会话管理 ======
 const { loadSessionHistory, resetChat, loadingHistory } = useChatSession({
   messages,
   hasStarted,
@@ -483,31 +171,35 @@ const { loadSessionHistory, resetChat, loadingHistory } = useChatSession({
   uploadedFiles,
   currentSessionId,
   currentScene,
-  escapeHtml
+  escapeHtml,
 })
 
-// 侧边栏状态
+// ====== 场景切换 ======
+function switchScene(scene: string) {
+  currentScene.value = scene
+  if (currentSessionId.value) {
+    updateSessionScene(currentSessionId.value, scene).catch(() => {})
+  }
+}
+
+// ====== 侧边栏 ======
 const showSidebar = ref(true)
 const sessions = ref<ChatSessionItem[]>([])
 const activeSessionId = ref<number | null>(null)
 const sessionsLoading = ref(false)
 
-function sceneLabel(scene: string) {
-  const map: Record<string, string> = {
-    default: '综合',
-    resume: '简历诊断',
-    'interview-hr': 'HR面试',
-    'interview-pro': '专业面试',
-    career: '职业规划',
-  }
-  return map[scene] || '综合'
+// 加载超时检测
+const loadingTimedOut = ref(false)
+let loadingTimer: ReturnType<typeof setTimeout> | null = null
+
+function startLoadingTimer() {
+  loadingTimedOut.value = false
+  loadingTimer = setTimeout(() => { loadingTimedOut.value = true }, 15000)
 }
 
-function formatSessionTime(t: string) {
-  if (!t) return ''
-  const d = new Date(t)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+function clearLoadingTimer() {
+  if (loadingTimer) { clearTimeout(loadingTimer); loadingTimer = null }
+  loadingTimedOut.value = false
 }
 
 async function fetchSessions() {
@@ -525,9 +217,7 @@ async function fetchSessions() {
   }
 }
 
-function retryLoadHistory() {
-  fetchSessions()
-}
+function retryLoadHistory() { fetchSessions() }
 
 function selectSession(id: number) {
   activeSessionId.value = id
@@ -539,66 +229,42 @@ async function deleteSession(id: number) {
   try {
     await delSession(id)
     sessions.value = sessions.value.filter(s => s.id !== id)
-    if (activeSessionId.value === id) {
-      resetChat()
-      activeSessionId.value = null
-    }
+    if (activeSessionId.value === id) { resetChat(); activeSessionId.value = null }
   } catch (e) {
     console.error('删除会话失败', e)
   }
 }
 
+// ====== 简历联动 ======
+const hasResume = ref(false)
+
 function startNewChat() {
   resetChat()
   activeSessionId.value = null
   hasResume.value = false
-  // 清除所有查询参数，避免残留 scene/sessionId 触发 watch
   router.replace({ query: {} })
 }
 
-// 同步侧边栏选中状态
-watch(currentSessionId, (newId) => {
-  activeSessionId.value = newId ? Number(newId) : null
-})
+// ====== Logo 动画 ======
+const showChar1 = ref(false)
+const showChar2 = ref(false)
+const showChar3 = ref(false)
 
-// 对话历史加载超时检测
-watch(loadingHistory, (loading) => {
-  if (loading) {
-    startLoadingTimer()
-  } else {
-    clearLoadingTimer()
-  }
-})
+function startLogoAnimation() {
+  showChar1.value = true
+  setTimeout(() => { showChar2.value = true }, 300)
+  setTimeout(() => { showChar3.value = true }, 600)
+}
 
-onMounted(async () => {
-  // 处理初始路由参数（sessionId 恢复历史 / scene 启动面试）
-  await handleRouteQuery(route.query)
-  fetchSessions()
-  startLogoAnimation()
-  window.addEventListener('use-file-from-space', handleFileFromSpace)
-})
-
-onUnmounted(() => {
-  stopSse()
-  window.removeEventListener('use-file-from-space', handleFileFromSpace)
-})
-
-// 监听路由变化（组件复用时不会重新 mount，需要 watch 触发）
-watch(() => route.query, async (newQuery) => {
-  await handleRouteQuery(newQuery)
-})
-
-// 路由参数处理锁，防止异步执行期间重复进入
+// ====== 路由参数处理 ======
 let _handlingRoute = false
 
-// 集中处理路由参数，避免 onMounted + watch 重复执行
 async function handleRouteQuery(query: Record<string, any>) {
   if (_handlingRoute) return
   _handlingRoute = true
   try {
     const sessionId = query.sessionId as string | undefined
     const scene = query.scene as string | undefined
-
     if (sessionId && sessionId !== 'undefined' && sessionId !== '') {
       resetChat()
       await loadSessionHistory(sessionId)
@@ -620,27 +286,41 @@ async function handleRouteQuery(query: Record<string, any>) {
   } finally {
     _handlingRoute = false
   }
+  // 每次处理路由后刷新会话列表，确保侧边栏及时加载
+  fetchSessions()
 }
 
-function handleEnter(e: KeyboardEvent) {
-  if (!e.shiftKey) {
-    sendMessage()
-  } else {
-    userInput.value += '\n'
-  }
-}
+// ====== 同步 ======
+watch(currentSessionId, (newId) => {
+  activeSessionId.value = newId ? Number(newId) : null
+})
+
+watch(loadingHistory, (loading) => {
+  if (loading) startLoadingTimer(); else clearLoadingTimer()
+})
+
+onMounted(async () => {
+  await handleRouteQuery(route.query)
+  startLogoAnimation()
+  window.addEventListener('use-file-from-space', handleFileFromSpace)
+})
+
+onUnmounted(() => {
+  stopSse()
+  window.removeEventListener('use-file-from-space', handleFileFromSpace)
+})
+
+watch(() => route.query, async (newQuery) => {
+  await handleRouteQuery(newQuery)
+})
 </script>
 
 <style scoped lang="scss">
-// 水墨黑主题色
 $ink-black: #0a0a0a;
 $ink-deep: #141414;
 $ink-mid: #1f1f1f;
-$ink-light: #2d2d2d;
 $ink-pale: #5a5a5a;
 $paper-white: #ffffff;
-$paper-cream: #f8f8f6;
-$paper-gray: #f5f5f5;
 $accent-red: #8b1a1a;
 
 .chat-page {
@@ -650,663 +330,6 @@ $accent-red: #8b1a1a;
   background: $paper-white;
 }
 
-/* ---- 加载中 ---- */
-.loading-history {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  color: $ink-pale;
-  font-size: 14px;
-
-  .loading-spin {
-    font-size: 28px;
-    animation: loading-rotate 1s linear infinite;
-  }
-}
-
-@keyframes loading-rotate {
-  to { transform: rotate(360deg); }
-}
-
-/* ---- 日期分隔 ---- */
-.date-separator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px 0 12px;
-  position: relative;
-
-  &::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 50%;
-    height: 1px;
-    background: rgba(0, 0, 0, 0.06);
-  }
-
-  .date-separator-text {
-    position: relative;
-    z-index: 1;
-    padding: 0 16px;
-    font-size: 12px;
-    color: #bbb;
-    background: $paper-white;
-  }
-}
-
-/* ---- 加载超时提示 ---- */
-.loading-timeout {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-  padding: 8px 16px;
-  background: rgba(245, 108, 108, 0.06);
-  border: 1px solid rgba(245, 108, 108, 0.15);
-  border-radius: 8px;
-  font-size: 13px;
-  color: #f56c6c;
-
-  .el-button {
-    font-size: 13px;
-  }
-}
-
-/* ---- 空状态 ---- */
-.empty-state {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px;
-  padding-top: 80px;
-
-  .logo {
-    position: relative;
-    margin-bottom: 12px;
-
-    .logo-text {
-      font-size: 72px;
-      font-weight: 700;
-      color: $ink-black;
-      font-family: 'Noto Serif SC', 'STSong', serif;
-      letter-spacing: 16px;
-      position: relative;
-      z-index: 2;
-    }
-
-    .logo-ink {
-      position: absolute;
-      bottom: 8px;
-      left: 0;
-      right: 0;
-      height: 12px;
-      background: linear-gradient(90deg, transparent, rgba(139, 26, 26, 0.4), transparent);
-      filter: blur(6px);
-      z-index: 1;
-    }
-  }
-
-  .logo-subtitle {
-    font-size: 14px;
-    color: $ink-pale;
-    font-family: 'Noto Serif SC', 'STSong', serif;
-    letter-spacing: 4px;
-    margin-bottom: 48px;
-  }
-
-  /* 简历+ Logo */
-  .logo-lishizhen {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    margin-bottom: 12px;
-    position: relative;
-
-    .logo-char {
-      font-size: 64px;
-      font-weight: 700;
-      color: $ink-black;
-      font-family: 'Noto Serif SC', 'STSong', serif;
-      line-height: 1;
-      opacity: 0;
-      transform: translateY(-20px);
-      transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-
-      &.typing {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .logo-char-last {
-      color: $accent-red;
-
-      &.typing {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-  }
-
-  .input-wrapper {
-    width: 100%;
-    max-width: 800px;
-  }
-}
-
-/* ---- 场景选择器（输入框左上角） ---- */
-.scene-selector {
-  position: absolute;
-  top: 8px;
-  left: 10px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  z-index: 2;
-
-  .scene-trigger {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    padding: 2px 8px;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    border-radius: 4px;
-    background: transparent;
-    color: $ink-pale;
-    font-size: 12px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-
-    .scene-arrow {
-      font-size: 10px;
-      transition: transform 0.2s ease;
-    }
-
-    &:hover {
-      border-color: #3b82f6;
-      color: #3b82f6;
-    }
-  }
-
-  .scene-menu {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    margin-top: 4px;
-    background: $paper-white;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-    padding: 4px;
-    min-width: 130px;
-    z-index: 10;
-
-    .scene-menu-item {
-      display: flex;
-      align-items: center;
-      width: 100%;
-      padding: 6px 12px;
-      border: none;
-      border-radius: 4px;
-      background: transparent;
-      color: $ink-mid;
-      font-size: 13px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      cursor: pointer;
-      text-align: left;
-      transition: all 0.15s ease;
-
-      &:hover {
-        background: rgba(59, 130, 246, 0.08);
-        color: #3b82f6;
-      }
-
-      &.active {
-        color: #3b82f6;
-        font-weight: 600;
-      }
-    }
-  }
-
-  .resume-pill {
-    font-size: 12px;
-    line-height: 1;
-    cursor: default;
-    opacity: 0.7;
-  }
-
-  // 场景选择器颜色指示点
-  .scene-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    transition: background 0.2s ease;
-
-    &.scene-dot-sm {
-      width: 8px;
-      height: 8px;
-      display: inline-block;
-      vertical-align: middle;
-      margin-right: 4px;
-    }
-  }
-}
-
-/* ---- 输入框样式 ---- */
-.input-box {
-  position: relative;
-  background: $paper-white;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-  overflow: hidden;
-  transition: all 0.3s ease;
-
-  &:focus-within {
-    border-color: rgba(0, 0, 0, 0.15);
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
-  }
-
-  textarea {
-    width: 100%;
-    padding: 36px 24px 16px;
-    border: none;
-    outline: none;
-    resize: none;
-    font-size: 15px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    color: $ink-black;
-    background: transparent;
-
-    &::placeholder {
-      color: $ink-pale;
-    }
-  }
-
-  .uploaded-files {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 12px 20px 0 120px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
-    min-height: 32px;
-
-    .file-tag {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
-      background: rgba(10, 10, 10, 0.05);
-      border-radius: 8px;
-      font-size: 13px;
-      color: $ink-black;
-      transition: all 0.2s ease;
-
-      &:hover {
-        background: rgba(10, 10, 10, 0.08);
-      }
-
-      .file-name {
-        max-width: 150px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .remove-btn {
-        cursor: pointer;
-        color: $ink-pale;
-        font-size: 14px;
-        transition: color 0.2s ease;
-
-        &:hover {
-          color: #f56c6c;
-        }
-      }
-    }
-  }
-
-  .input-actions {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 20px 16px;
-    border-top: 1px solid rgba(0, 0, 0, 0.04);
-
-    .left-actions {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-
-      .file-count {
-        font-size: 13px;
-        color: $ink-pale;
-        padding: 4px 10px;
-        background: rgba(10, 10, 10, 0.04);
-        border-radius: 6px;
-      }
-    }
-
-    .right-actions {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-
-    .action-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 36px;
-      height: 36px;
-      border: 1px solid rgba(0, 0, 0, 0.08);
-      border-radius: 8px;
-      background: transparent;
-      color: $ink-pale;
-      cursor: pointer;
-      transition: all 0.3s ease;
-
-      &:hover {
-        border-color: rgba(0, 0, 0, 0.15);
-        color: $ink-mid;
-        background: rgba(0, 0, 0, 0.02);
-      }
-
-      .el-icon {
-        font-size: 18px;
-      }
-    }
-
-    .action-btn-upload {
-      gap: 4px;
-      width: auto;
-      padding: 0 12px;
-      border-color: rgba(59, 130, 246, 0.2);
-      color: #3b82f6;
-      background: rgba(59, 130, 246, 0.04);
-
-      &:hover {
-        border-color: rgba(59, 130, 246, 0.5);
-        color: #2563eb;
-        background: rgba(59, 130, 246, 0.08);
-      }
-
-      .upload-btn-text {
-        font-size: 12px;
-        font-weight: 500;
-      }
-    }
-
-    .send-btn {
-      width: 40px;
-      height: 40px;
-      border-radius: 10px;
-      border: none;
-      background: $ink-black;
-      color: $paper-white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.3s ease;
-
-      &:hover:not(:disabled) {
-        background: $ink-deep;
-        transform: scale(1.05);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-      }
-
-      &:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-      }
-
-      .el-icon {
-        font-size: 18px;
-      }
-    }
-
-    .stop-btn {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 0 16px;
-      height: 40px;
-      border-radius: 10px;
-      border: none;
-      background: #ef4444;
-      color: #fff;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 500;
-      white-space: nowrap;
-      transition: all 0.3s ease;
-
-      &:hover {
-        background: #dc2626;
-        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-      }
-
-      .stop-icon {
-        flex-shrink: 0;
-      }
-    }
-  }
-}
-
-/* ---- 对话状态 ---- */
-.chat-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  max-width: 900px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 80px 20px 0;
-  overflow: hidden;
-
-  .message-list {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    padding: 20px 0;
-
-    .history-empty-hint {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 60px 20px;
-      color: #999;
-      font-size: 14px;
-    }
-
-    .message-item {
-      display: flex;
-      gap: 12px;
-      padding: 16px 0;
-      animation: message-in 0.3s ease;
-
-      &.user {
-        flex-direction: row-reverse;
-
-        .message-content {
-          align-items: flex-end;
-        }
-
-        .message-bubble {
-          background: $ink-black;
-          color: $paper-white;
-          border-radius: 16px 16px 4px 16px;
-        }
-      }
-
-      &.ai {
-        .message-bubble {
-          background: $paper-gray;
-          color: $ink-black;
-          border-radius: 16px 16px 16px 4px;
-        }
-      }
-
-      .message-avatar {
-        flex-shrink: 0;
-
-        .avatar {
-          width: 40px;
-          height: 40px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 16px;
-
-          &.ai-avatar {
-            background: linear-gradient(135deg, #2D1B13 0%, #1A0F0A 100%);
-            font-family: 'Noto Serif SC', 'STSong', serif;
-            font-weight: 700;
-            border: 1.5px solid rgba(212, 165, 116, 0.3);
-            box-shadow: 0 2px 10px rgba(45, 27, 19, 0.35);
-            position: relative;
-
-            .avatar-char {
-              font-size: 18px;
-              color: #D4A574;
-              font-weight: 700;
-              position: relative;
-              z-index: 1;
-            }
-
-            /* 内圈细线，模拟 logo 的笔触层次 */
-            &::after {
-              content: '';
-              position: absolute;
-              inset: 4px;
-              border-radius: 50%;
-              border: 1px solid rgba(212, 165, 116, 0.12);
-              pointer-events: none;
-            }
-          }
-
-          &.lishizhen-avatar {
-            /* 与 favicon / public/resume-plus-logo.svg 统一风格 */
-          }
-
-          &.user-avatar {
-            background: linear-gradient(135deg, $ink-light 0%, $ink-mid 100%);
-            color: $paper-white;
-          }
-        }
-      }
-
-      .message-content {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        max-width: calc(100% - 60px);
-
-        .message-bubble {
-          padding: 12px 16px;
-          font-size: 15px;
-          line-height: 1.6;
-          word-wrap: break-word;
-        }
-
-        .message-time {
-          font-size: 12px;
-          color: $ink-pale;
-        }
-      }
-    }
-
-    .thinking {
-      .thinking-bubble {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        padding: 16px 20px;
-        background: $paper-gray;
-        border-radius: 16px 16px 16px 4px;
-        min-width: 180px;
-
-        .thinking-steps {
-          display: flex;
-          gap: 16px;
-
-          .thinking-step {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-
-            .step-dot {
-              width: 7px;
-              height: 7px;
-              border-radius: 50%;
-              background: #ddd;
-              transition: all 0.3s ease;
-
-              &.active {
-                background: #3b82f6;
-                box-shadow: 0 0 6px rgba(59, 130, 246, 0.5);
-              }
-
-              &.pulse {
-                background: #3b82f6;
-                animation: step-pulse 1s ease-in-out infinite;
-              }
-            }
-
-            .step-label {
-              font-size: 12px;
-              color: #999;
-            }
-          }
-        }
-
-        .thinking-text {
-          font-size: 13px;
-          color: $ink-pale;
-          font-family: 'Noto Serif SC', 'STSong', serif;
-          margin-left: 1px;
-        }
-      }
-    }
-  }
-
-  .bottom-input {
-    padding: 20px 0;
-  }
-}
-
-@keyframes step-pulse {
-  0%, 100% { opacity: 0.5; transform: scale(0.8); }
-  50% { opacity: 1; transform: scale(1.2); }
-}
-
-@keyframes message-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-
-/* ===== 侧边栏布局 ===== */
 .chat-layout {
   flex: 1;
   display: flex;
@@ -1322,204 +345,59 @@ $accent-red: #8b1a1a;
   position: relative;
 }
 
-/* ===== 侧边栏 ===== */
-.chat-sidebar {
-  width: 280px;
-  flex-shrink: 0;
-  background: $ink-deep;
+/* ---- 空状态 ---- */
+.empty-state {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-  border-right: 1px solid rgba(255, 255, 255, 0.04);
-
-  &.collapsed {
-    width: 0;
-    border-right: none;
-  }
-}
-
-.sidebar-body {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 0 8px 12px;
-
-  &::-webkit-scrollbar {
-    width: 4px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 2px;
-  }
-}
-
-/* Loading skeleton */
-.sidebar-loading {
-  padding: 8px;
-}
-
-.sidebar-skeleton {
-  padding: 12px;
-  margin-bottom: 8px;
-
-  .skeleton-line {
-    height: 12px;
-    background: rgba(255, 255, 255, 0.06);
-    border-radius: 4px;
-    margin-bottom: 8px;
-    animation: skeleton-pulse 1.5s ease-in-out infinite;
-
-    &.w-60 { width: 60%; }
-    &.w-30 { width: 30%; }
-  }
-}
-
-@keyframes skeleton-pulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
-}
-
-/* 空列表 */
-.sidebar-empty {
-  display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40px 16px;
-  color: rgba(255, 255, 255, 0.3);
-  font-size: 13px;
-  font-family: 'Noto Serif SC', 'STSong', serif;
-}
+  padding: 40px;
+  padding-top: 80px;
 
-/* 会话列表 */
-.session-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.session-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 10px 12px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  cursor: pointer;
-  text-align: left;
-  transition: all 0.15s ease;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.06);
-
-    .session-del {
-      opacity: 1;
-    }
-  }
-
-  &.active {
-    background: rgba(255, 255, 255, 0.1);
-  }
-
-  .session-info {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-  }
-
-  .session-title {
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.85);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    line-height: 1.3;
-  }
-
-  .session-meta {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.3);
-  }
-
-  .session-scene {
-    color: rgba(255, 255, 255, 0.35);
-  }
-
-  .session-dot {
-    opacity: 0.4;
-  }
-
-  .session-del {
-    flex-shrink: 0;
-    width: 24px;
-    height: 24px;
+  .logo-wrapper {
     display: flex;
     align-items: center;
     justify-content: center;
-    border: none;
-    border-radius: 4px;
-    background: transparent;
-    color: rgba(255, 255, 255, 0.25);
-    cursor: pointer;
-    opacity: 0;
-    transition: all 0.15s ease;
-    padding: 0;
+    gap: 10px;
+    margin-bottom: 12px;
 
-    &:hover {
-      background: rgba(255, 255, 255, 0.1);
-      color: #f56c6c;
+    .logo-char {
+      font-size: 64px;
+      font-weight: 700;
+      color: $ink-black;
+      font-family: 'Noto Serif SC', 'STSong', serif;
+      line-height: 1;
+      opacity: 0;
+      transform: translateY(-20px);
+      transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+      &.typing { opacity: 1; transform: translateY(0); }
     }
+    .logo-char-last {
+      color: $accent-red;
+      &.typing { opacity: 1; transform: translateY(0); }
+    }
+  }
 
-    .el-icon {
-      font-size: 14px;
-    }
+  :deep(.input-box-empty) {
+    width: 100%;
+    max-width: 800px;
   }
 }
 
-/* 收起按钮 */
-.sidebar-toggle {
-  position: absolute;
-  left: 280px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 24px;
-  height: 48px;
-  border: none;
-  border-radius: 0 8px 8px 0;
-  background: $ink-deep;
-  color: rgba(255, 255, 255, 0.4);
-  cursor: pointer;
+/* ---- 对话容器 ---- */
+.chat-container {
+  flex: 1;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 5;
+  flex-direction: column;
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 80px 20px 0;
+  overflow: hidden;
 
-  &:hover {
-    background: lighten($ink-deep, 5%);
-    color: rgba(255, 255, 255, 0.7);
+  .bottom-input {
+    padding: 20px 0;
   }
-
-  .toggle-arrow {
-    font-size: 10px;
-    line-height: 1;
-  }
-}
-
-.chat-sidebar.collapsed + .sidebar-toggle {
-  left: 0;
 }
 </style>

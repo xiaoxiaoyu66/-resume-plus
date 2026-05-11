@@ -65,7 +65,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -74,14 +74,14 @@ import { listHistory, delSession } from '@/api/chat'
 
 const router = useRouter()
 const route = useRoute()
-const chatHistory = ref([])
+const chatHistory = ref<any[]>([])
 const searchKeyword = ref('')
 
 // 加载历史对话
 async function loadChatHistory() {
   try {
     const res = await listHistory()
-    chatHistory.value = res.data || []
+    chatHistory.value = (res.data as any[]) || []
   } catch (e) {
     console.error('加载历史对话失败', e)
     ElMessage.error('加载历史对话失败')
@@ -102,7 +102,7 @@ const filteredHistory = computed(() => {
 
 // 按日期分组
 const groupedHistory = computed(() => {
-  const groups = {}
+  const groups: Record<string, { date: string; label: string; sessions: any[] }> = {}
   const now = new Date()
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000)

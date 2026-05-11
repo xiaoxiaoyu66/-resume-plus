@@ -34,7 +34,7 @@
   </transition>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { getRandomQuote } from '@/utils/quoteLibrary'
 
@@ -46,7 +46,7 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue'])
 
 const visible = ref(false)
-const shownChars = ref([])
+const shownChars = ref<any[]>([])
 const totalLength = ref(0)
 
 const mid = computed(() => Math.ceil(totalLength.value / 2))

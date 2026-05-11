@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.annotation.Resource;
 import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * AI 聊天控制器
@@ -19,6 +21,8 @@ import java.util.*;
 @RestController
 @RequestMapping("/ai/chat")
 public class ChatController {
+
+    private static final Logger log = LoggerFactory.getLogger(ChatController.class);
 
     @Resource
     private IChatService chatService;
@@ -79,7 +83,7 @@ public class ChatController {
         List<String> tempFileIds = body.get("tempFileIds") != null
                 ? (List<String>) body.get("tempFileIds") : new ArrayList<>();
 
-        System.out.println("[ChatController] 接收到的参数: tempFileIds=" + tempFileIds + ", fileNames=" + fileNames);
+        log.info("接收到的参数: tempFileIds={}, fileNames={}", tempFileIds, fileNames);
 
         try {
             // 如果有临时文件，先保存到MinIO
@@ -92,16 +96,16 @@ public class ChatController {
             }
             if (!tempFileIds.isEmpty()) {
                 List<String> savedFiles = persistTempFiles(tempFileIds, userId);
-                System.out.println("[ChatController] 临时文件已保存到MinIO: " + savedFiles);
+                log.info("临时文件已保存到MinIO: {}", savedFiles);
                 persistedFileNames.addAll(savedFiles);
             }
 
-            System.out.println("[ChatController] 最终传递给chatService的文件列表: " + persistedFileNames);
+            log.info("最终传递给chatService的文件列表: {}", persistedFileNames);
 
             Map<String, Object> result = chatService.chatWithScene(userId, sessionId, message, persistedFileNames, scene);
             return AjaxResult.success(result);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("AI 回复失败", e);
             return AjaxResult.error("AI 回复失败: " + e.getMessage());
         }
     }
@@ -117,47 +121,45 @@ public class ChatController {
         List<String> savedFileNames = new ArrayList<>();
         String folder = "ai-uploads/";
 
-        System.out.println("[persistTempFiles] 开始处理临时文件: " + tempFileIds);
+        log.info("开始处理临时文件: {}", tempFileIds);
 
         for (String tempFileId : tempFileIds) {
-            System.out.println("[persistTempFiles] 处理临时文件: " + tempFileId);
+            log.info("处理临时文件: {}", tempFileId);
 
             // 验证文件归属
             if (!tempFileStorageService.validateFileOwnership(tempFileId, userId)) {
-                System.out.println("[persistTempFiles] 文件归属验证失败: " + tempFileId);
+                log.warn("文件归属验证失败: {}", tempFileId);
                 continue;
             }
 
             try {
                 TempFileStorageService.TempFileInfo tempInfo = tempFileStorageService.getTempFileInfo(tempFileId);
                 if (tempInfo == null) {
-                    System.out.println("[persistTempFiles] 临时文件信息不存在: " + tempFileId);
+                    log.warn("临时文件信息不存在: {}", tempFileId);
                     continue;
                 }
 
-                System.out.println("[persistTempFiles] 获取到文件信息: " + tempInfo.getOriginalName());
+                log.info("获取到文件信息: {}", tempInfo.getOriginalName());
 
                 // 获取文件内容
                 byte[] fileContent = tempFileStorageService.getTempFileBytes(tempFileId);
-                System.out.println("[persistTempFiles] 文件内容大小: " + (fileContent != null ? fileContent.length : 0) + " bytes");
+                log.info("文件内容大小: {} bytes", fileContent != null ? fileContent.length : 0);
 
                 // 上传到MinIO
                 String userFolder = folder + userId + "/";
                 String fileName = minioService.uploadFile(fileContent, tempInfo.getOriginalName(), userFolder);
-                System.out.println("[persistTempFiles] 文件已保存到MinIO: " + fileName);
+                log.info("文件已保存到MinIO: {}", fileName);
                 savedFileNames.add(fileName);
 
                 // 删除临时文件
                 tempFileStorageService.deleteTempFile(tempFileId);
 
             } catch (Exception e) {
-                // 记录错误但继续处理其他文件
-                System.err.println("[persistTempFiles] 保存临时文件失败: " + tempFileId + ", error: " + e.getMessage());
-                e.printStackTrace();
+                log.error("保存临时文件失败: {}, error: {}", tempFileId, e.getMessage(), e);
             }
         }
 
-        System.out.println("[persistTempFiles] 处理完成，保存的文件: " + savedFileNames);
+        log.info("处理完成，保存的文件: {}", savedFileNames);
         return savedFileNames;
     }
 

@@ -1,8 +1,16 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { getToken } from '@/utils/auth'
 
-const routes = [
+// 扩展 RouteMeta 类型
+declare module 'vue-router' {
+  interface RouteMeta {
+    public?: boolean
+    fullScreen?: boolean
+  }
+}
+
+const routes: RouteRecordRaw[] = [
   {
     path: '/login',
     name: 'Login',
@@ -61,7 +69,7 @@ const router = createRouter({
 // 路由守卫
 router.beforeEach((to, from, next) => {
   const token = getToken()
-  
+
   // 如果是公开页面，直接放行
   if (to.meta.public) {
     // 如果已登录，跳转到首页
@@ -72,7 +80,7 @@ router.beforeEach((to, from, next) => {
     }
     return
   }
-  
+
   // 需要登录的页面
   if (!token) {
     next('/login')

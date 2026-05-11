@@ -8,7 +8,7 @@
   </svg>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 
 const props = defineProps({
@@ -60,7 +60,7 @@ const sizeClass = computed(() => {
 
 // 图标样式
 const iconStyle = computed(() => {
-  const style = {
+  const style: Record<string, string> = {
     width: `${iconSize.value}px`,
     height: `${iconSize.value}px`
   }

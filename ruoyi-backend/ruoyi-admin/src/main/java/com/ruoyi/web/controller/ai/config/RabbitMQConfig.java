@@ -1,6 +1,8 @@
 package com.ruoyi.web.controller.ai.config;
 
 import org.springframework.amqp.core.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
@@ -13,6 +15,8 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 public class RabbitMQConfig {
+
+    private static final Logger log = LoggerFactory.getLogger(RabbitMQConfig.class);
 
     // 交换机名称
     public static final String FILE_EXCHANGE = "file.exchange";
@@ -119,7 +123,7 @@ public class RabbitMQConfig {
         template.setMessageConverter(jsonMessageConverter());
         template.setConfirmCallback((correlationData, ack, cause) -> {
             if (!ack) {
-                System.err.println("消息发送失败: " + cause);
+                log.error("消息发送失败: {}", cause);
             }
         });
         return template;

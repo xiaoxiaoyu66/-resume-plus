@@ -6,6 +6,7 @@
  * 主色调：RGB(14, 50, 101) 靛蓝墨韵
  */
 
+import type { App } from 'vue'
 import SmButton from './SmButton.vue'
 import SmCard from './SmCard.vue'
 import SmInput from './SmInput.vue'
@@ -22,7 +23,7 @@ const components = [
 ]
 
 // 全局注册
-const install = (app) => {
+const install = (app: App) => {
   components.forEach(component => {
     app.component(component.name || component.__name, component)
   })
@@ -41,4 +42,4 @@ export {
 export default {
   install,
   ...components
-}
+} satisfies { install: (app: App) => void }

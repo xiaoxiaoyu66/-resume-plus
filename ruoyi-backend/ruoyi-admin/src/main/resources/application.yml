@@ -175,7 +175,10 @@ aliyun:
 
 # 微信登录配置
 wx:
+  app-id: ${WX_APP_ID}
   app-secret: ${WX_APP_SECRET}
+  redirect-uri: ${WX_REDIRECT_URI:http://localhost:8080/login/wechat/callback}
+  qr-expire-seconds: 300
 
 # 项目相关配置
 ruoyi:

@@ -13,7 +13,7 @@
   </button>
 </template>
 
-<script setup>
+<script setup lang="ts">
 /**
  * 水墨画风格按钮组件
  * @description 带有水墨涟漪效果的按钮
@@ -22,7 +22,7 @@ const props = defineProps({
   type: {
     type: String,
     default: 'primary',
-    validator: (val) => ['primary', 'secondary', 'accent', 'text'].includes(val)
+    validator: (val: unknown) => ['primary', 'secondary', 'accent', 'text'].includes(val as string)
   },
   loading: {
     type: Boolean,
@@ -36,7 +36,7 @@ const props = defineProps({
 
 const emit = defineEmits(['click'])
 
-function handleClick(e) {
+function handleClick(e: MouseEvent) {
   if (!props.loading && !props.disabled) {
     emit('click', e)
   }

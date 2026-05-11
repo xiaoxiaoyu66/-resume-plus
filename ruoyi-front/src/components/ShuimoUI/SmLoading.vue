@@ -8,7 +8,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 /**
  * 水墨画风格加载动画组件
  * @description "研墨构思中..." 水墨动画

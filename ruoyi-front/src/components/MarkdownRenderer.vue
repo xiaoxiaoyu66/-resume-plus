@@ -2,7 +2,7 @@
   <div class="markdown-body" v-html="renderedContent"></div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, watch, nextTick } from 'vue'
 import { marked } from 'marked'
 import hljs from 'highlight.js'
@@ -25,14 +25,11 @@ function decodeHtmlEntities(text) {
   return textarea.value
 }
 
-// 配置 marked
+// 配置 marked（highlight 由 marked-highlight 插件处理，marked.setOptions 的选项强制绕过 TS 类型）
 marked.setOptions({
   breaks: true,
   gfm: true,
-  headerIds: false,
-  mangle: false,
-  sanitize: false,
-  highlight: function(code, lang) {
+  highlight: function(code: string, lang: string) {
     // 先解码 HTML 实体
     const decodedCode = decodeHtmlEntities(code)
     if (lang && hljs.getLanguage(lang)) {
@@ -44,14 +41,15 @@ marked.setOptions({
     }
     return hljs.highlightAuto(decodedCode).value
   }
-})
+  } as any)
+
 
 // 渲染 Markdown（输出经 XSS 过滤）
 const renderedContent = computed(() => {
   if (!props.content) return ''
   // 先解码内容中的 HTML 实体
   const decodedContent = decodeHtmlEntities(props.content)
-  const rawHtml = marked.parse(decodedContent) || ''
+  const rawHtml = String(marked.parse(decodedContent) || '')
   return sanitizeHtml(rawHtml)
 })
 
@@ -60,10 +58,11 @@ function addCopyButtons() {
   nextTick(() => {
     const codeBlocks = document.querySelectorAll('.markdown-body pre')
     codeBlocks.forEach(pre => {
+      const preEl = pre as HTMLElement
       // 检查是否已经有复制按钮
-      if (pre.querySelector('.copy-code-btn')) return
+      if (preEl.querySelector('.copy-code-btn')) return
 
-      const code = pre.querySelector('code')
+      const code = preEl.querySelector('code')
       if (!code) return
 
       const btn = document.createElement('button')
@@ -82,8 +81,8 @@ function addCopyButtons() {
         })
       }
 
-      pre.style.position = 'relative'
-      pre.appendChild(btn)
+      preEl.style.position = 'relative'
+      preEl.appendChild(btn)
     })
   })
 }

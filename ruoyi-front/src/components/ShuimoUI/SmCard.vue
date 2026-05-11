@@ -19,7 +19,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 
 /**
@@ -54,7 +54,7 @@ const props = defineProps({
 })
 
 const cardStyle = computed(() => {
-  const style = {}
+  const style: Record<string, string> = {}
   if (props.maxHeight) {
     style.maxHeight = props.maxHeight
   }
@@ -62,7 +62,7 @@ const cardStyle = computed(() => {
 })
 
 const bodyStyle = computed(() => {
-  const style = {}
+  const style: Record<string, string> = {}
   if (typeof props.padding === 'number') {
     style.padding = `${props.padding}px`
   } else {

@@ -15,7 +15,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 /**
  * 水墨画风格消息气泡组件
  * @description 带有墨迹效果的聊天消息
@@ -24,7 +24,7 @@ const props = defineProps({
   role: {
     type: String,
     default: 'user',
-    validator: (val) => ['user', 'ai'].includes(val)
+    validator: (val: unknown) => ['user', 'ai'].includes(val as string)
   },
   content: {
     type: String,
