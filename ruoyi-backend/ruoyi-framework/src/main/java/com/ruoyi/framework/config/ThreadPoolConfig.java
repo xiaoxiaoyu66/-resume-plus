@@ -6,6 +6,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -57,6 +60,18 @@ public class ThreadPoolConfig
         executor.setQueueCapacity(50);
         executor.setKeepAliveSeconds(60);
         executor.setThreadNamePrefix("ai-task-");
+        // 传播 SecurityContext 到异步线程（SSE 流式对话需要）
+        executor.setTaskDecorator(runnable -> {
+            SecurityContext context = SecurityContextHolder.getContext();
+            return () -> {
+                try {
+                    SecurityContextHolder.setContext(context);
+                    runnable.run();
+                } finally {
+                    SecurityContextHolder.clearContext();
+                }
+            };
+        });
         // AI 请求排队满时直接拒绝（由调用方处理降级）
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
         executor.initialize();

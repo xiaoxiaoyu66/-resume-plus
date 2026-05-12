@@ -104,7 +104,8 @@ public class SecurityConfig
                     // 微信扫码登录相关接口允许匿名访问
                     .requestMatchers("/login/wechat/**", "/login/phone", "/login/sendSms").permitAll()
                     // AI 缓存统计和健康检查接口允许匿名访问
-                    .requestMatchers("/ai/chat/cache/stats", "/ai/chat/health").permitAll()
+                    // SSE 流式对话接口也 permitAll（Controller 内自行鉴权，避免异步清理时 filter 误拦截）
+                    .requestMatchers("/ai/chat/cache/stats", "/ai/chat/health", "/ai/chat/stream").permitAll()
                     // AI 岗位接口允许匿名访问（江城聘公共页面 + 批量导入工具）
                     .requestMatchers("/ai/jobs/**").permitAll()
                     // 静态资源，可匿名访问
