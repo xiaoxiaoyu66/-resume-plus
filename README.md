@@ -1,7 +1,7 @@
 # Resume+ — AI 中文简历诊断平台
 
 <p align="center">
-  <img src="./ruoyi-front/public/resume-plus-logo.svg" alt="Resume+ Logo" width="130" />
+  <img src="https://raw.githubusercontent.com/xiaoxiaoyu66/-resume-plus/master/ruoyi-front/public/resume-plus-logo.svg" alt="Resume+ Logo" width="130" />
 </p>
 
 ---
@@ -27,8 +27,8 @@
 ## 演示视频
 
 <p align="center">
-  <video src="docs/演示文档plus-compressed.mp4" controls width="100%">
-    您的浏览器不支持 video 标签，请<a href="docs/演示文档plus-compressed.mp4">下载视频</a>观看。
+  <video src="https://raw.githubusercontent.com/xiaoxiaoyu66/-resume-plus/master/docs/%E6%BC%94%E7%A4%BA%E6%96%87%E6%A1%A3plus-compressed.mp4" controls width="100%">
+    您的浏览器不支持 video 标签，请<a href="https://raw.githubusercontent.com/xiaoxiaoyu66/-resume-plus/master/docs/%E6%BC%94%E7%A4%BA%E6%96%87%E6%A1%A3plus-compressed.mp4">下载视频</a>观看。
   </video>
 </p>
 
