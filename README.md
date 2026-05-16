@@ -27,11 +27,9 @@
 ## 演示视频
 
 <p align="center">
-  <a href="https://he2wa.xin/profile/demo-video/demo.mp4" target="_blank">
-    <img src="docs/architecture.svg" alt="Resume+ 演示视频" width="80%" style="max-width: 720px; border-radius: 8px; border: 1px solid #e0e0e0;" />
-    <br/>
-    <strong>▶ 点击观看完整演示视频</strong>
-  </a>
+  <video src="https://he2wa.xin/profile/demo-video/demo.mp4" controls width="80%" style="max-width:720px;border-radius:8px;">
+    您的浏览器不支持视频播放，请 <a href="https://he2wa.xin/profile/demo-video/demo.mp4">下载视频</a> 观看。
+  </video>
   <br/>
   <sub>简历解析 → AI 诊断 → 面试模拟 → 岗位匹配</sub>
 </p>
