@@ -119,7 +119,7 @@
 
 ## 系统架构
 
-![系统架构图](docs/architecture.svg)
+![系统架构图](https://raw.githubusercontent.com/xiaoxiaoyu66/-resume-plus/master/docs/architecture.svg)
 
 ---
 
