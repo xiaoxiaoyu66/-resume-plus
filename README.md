@@ -169,6 +169,7 @@
 | **XSS 存储型** | 简历内容可注入 `<script>` | 前端双层过滤 + 白名单模式 |
 | **AccessKey 硬编码** | API 密钥泄露即失控 | 全部迁出到 `${}` 占位 |
 | **跨域过度开放** | `@CrossOrigin(origins = "*")` | 删除注解，由 Nginx 统一管理 |
+| **SQL 注入** | URL 参数可注入 `union select`、`drop table` 等恶意 SQL | Nginx 层正则过滤关键词：`union.*select`、`sleep()`、`waitfor`、`benchmark`、`create/drop table`，命中直接 `return 444`（连接断开），不给任何响应。Druid Wall 二层拦截，文件上传 10MB 硬上限防任意文件写入。 |
 
 ---
 

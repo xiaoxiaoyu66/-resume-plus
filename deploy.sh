@@ -159,7 +159,7 @@ cat > /etc/nginx/sites-available/resume-plus << 'NGINX'
 server {
     listen 80;
     server_name _;
-    client_max_body_size 100M;
+    client_max_body_size 500M;
 
     # 前端静态文件
     root /opt/resume-plus/ruoyi-front/dist;
@@ -198,6 +198,13 @@ server {
     # 上传文件（本地存储模式）
     location /uploads/ {
         alias /opt/resume-plus/uploads/;
+        expires 7d;
+    }
+
+    # 演示视频（Nginx 直出，不经过 Java，节省性能）
+    location /profile/demo-video/ {
+        alias /opt/resume-plus/upload/demo-video/;
+        limit_rate 2M;
         expires 7d;
     }
 }

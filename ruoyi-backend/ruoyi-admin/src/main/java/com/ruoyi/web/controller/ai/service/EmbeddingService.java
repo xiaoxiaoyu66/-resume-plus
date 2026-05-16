@@ -68,6 +68,8 @@ public class EmbeddingService {
             requestBody.put("model", embeddingProperties.getModel());
             requestBody.put("input", validTexts);
             requestBody.put("encoding_format", "float");
+            // 指定向量维度（BAAI/bge-m3 支持通过 dimensions 参数控制输出维度）
+            requestBody.put("dimensions", embeddingProperties.getDimension());
 
             // 构建请求
             Request request = new Request.Builder()
