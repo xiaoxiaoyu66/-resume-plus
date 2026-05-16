@@ -27,7 +27,7 @@
 ## 演示视频
 
 <p align="center">
-  <a href="https://he2wa.xin/demo-video.html" target="_blank">
+  <a href="https://he2wa.xin/profile/demo-video/demo.mp4" target="_blank">
     <img src="docs/architecture.svg" alt="Resume+ 演示视频" width="80%" style="max-width: 720px; border-radius: 8px; border: 1px solid #e0e0e0;" />
     <br/>
     <strong>▶ 点击观看完整演示视频</strong>
