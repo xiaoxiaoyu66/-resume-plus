@@ -200,15 +200,14 @@ describe('SseChatClient', () => {
     globalThis.fetch.mockResolvedValue(createMockResponse([]))
 
     await client.streamChat({
-      userId: 1,
       message: 'hello',
       scene: 'default'
     }).catch(() => {})
 
     const callUrl = globalThis.fetch.mock.calls[0][0]
     expect(callUrl).toContain('/api/ai/chat/stream')
-    expect(callUrl).toContain('userId=1')
     expect(callUrl).toContain('message=hello')
+    expect(callUrl).not.toContain('userId=') // userId 由后端从 JWT 获取
   })
 
   it('should include auth header', async () => {

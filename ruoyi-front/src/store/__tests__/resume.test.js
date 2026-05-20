@@ -154,7 +154,7 @@ describe('resume store', () => {
       store.addArrayEntry('education')
       expect(store.content.education.length).toBe(1)
       expect(store.content.education[0]).toEqual({
-        school: '', major: '', degree: '', start: '', end: '', gpa: ''
+        school: '', schoolId: null, major: '', degree: '', start: '', end: '', gpa: '', courses: []
       })
     })
 
@@ -282,7 +282,10 @@ describe('resume store', () => {
       expect(store.title).toBe('My Resume')
       expect(store.content.baseInfo.name).toBe('Alice')
       expect(store.content.skills[0].name).toBe('Vue')
-      expect(store.moduleOrder).toEqual(['baseInfo', 'skills', 'education'])
+      expect(store.moduleOrder).toEqual([
+        'baseInfo', 'skills', 'education',
+        'intention', 'experience', 'campus', 'projects', 'evaluation', 'awards', 'certificates'
+      ])
       expect(store.style.fontSize).toBe(14)
     })
 

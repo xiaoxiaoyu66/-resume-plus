@@ -37,23 +37,23 @@ describe('getCurrentTime', () => {
     vi.useRealTimers()
   })
 
-  it('should return time in HH:mm format', () => {
+  it('should return time in YYYY-MM-DD HH:mm:ss format', () => {
     vi.setSystemTime(new Date('2026-05-08T09:05:00'))
-    expect(getCurrentTime()).toBe('09:05')
+    expect(getCurrentTime()).toBe('2026-05-08 09:05:00')
   })
 
   it('should pad single digit hours and minutes', () => {
     vi.setSystemTime(new Date('2026-05-08T01:02:00'))
-    expect(getCurrentTime()).toBe('01:02')
+    expect(getCurrentTime()).toBe('2026-05-08 01:02:00')
   })
 
   it('should handle midnight', () => {
     vi.setSystemTime(new Date('2026-05-08T00:00:00'))
-    expect(getCurrentTime()).toBe('00:00')
+    expect(getCurrentTime()).toBe('2026-05-08 00:00:00')
   })
 
   it('should handle noon', () => {
     vi.setSystemTime(new Date('2026-05-08T12:30:00'))
-    expect(getCurrentTime()).toBe('12:30')
+    expect(getCurrentTime()).toBe('2026-05-08 12:30:00')
   })
 })

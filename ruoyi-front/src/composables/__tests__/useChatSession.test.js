@@ -118,7 +118,7 @@ describe('useChatSession', () => {
       expect(hasStarted.value).toBe(false)
     })
 
-    it('should not modify state when session has no messages', async () => {
+    it('should set started when session data exists even without messages', async () => {
       const { getSessionDetail } = await import('@/api/chat')
       getSessionDetail.mockResolvedValue({
         data: { messages: [], scene: 'default' }
@@ -126,7 +126,9 @@ describe('useChatSession', () => {
 
       await session.loadSessionHistory('42')
 
-      expect(hasStarted.value).toBe(false)
+      expect(hasStarted.value).toBe(true)
+      expect(currentSessionId.value).toBe('42')
+      expect(messages.value).toEqual([])
     })
   })
 })
