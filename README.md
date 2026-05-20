@@ -22,8 +22,6 @@
   </a>
   <img src="https://img.shields.io/badge/版本-v1.0.0-blue?style=flat-square" alt="Version" />
   <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="License" />
-  <img src="https://img.shields.io/github/stars/xiaoxiaoyu66/-resume-plus?style=flat-square&color=yellow" alt="Stars" />
-  <img src="https://img.shields.io/github/last-commit/xiaoxiaoyu66/-resume-plus?style=flat-square&color=orange" alt="Last Commit" />
   <img src="https://img.shields.io/github/actions/workflow/status/xiaoxiaoyu66/-resume-plus/backend-ci.yml?style=flat-square&label=backend" alt="Backend CI" />
   <img src="https://img.shields.io/github/actions/workflow/status/xiaoxiaoyu66/-resume-plus/frontend-ci.yml?style=flat-square&label=frontend" alt="Frontend CI" />
 </p>
