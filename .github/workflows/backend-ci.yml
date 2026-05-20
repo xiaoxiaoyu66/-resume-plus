@@ -26,4 +26,4 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - run: mvn test -pl ruoyi-admin -am -Dtest="FileVectorizationServiceTest,JobAnalyzeServiceTest" -DfailIfNoTests=false
+      - run: mvn test -pl ruoyi-admin -am -Dtest="FileVectorizationServiceTest,JobAnalyzeServiceTest" -Dsurefire.failIfNoSpecifiedTests=false
