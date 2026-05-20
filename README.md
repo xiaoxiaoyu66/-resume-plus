@@ -9,10 +9,12 @@
 ## 在线体验
 
 <p align="center" style="font-size:20px;padding:16px;background:#e8f4fd;border-radius:10px;border:2px solid #667eea;">
-  🔗 <strong><a href="https://he2wa.xin" target="_blank"></a></strong>
+  🔗 <strong><a href="https://he2wa.xin" target="_blank">https://he2wa.xin</a></strong>
 </p>
 
-注：项目已经上线，已有20+用户使用。但服务器是2核4G负载不了多人，何二娃在想办法！！！！**这是测试功能请勿上传真实信息**
+> **⚠️ 服务器是 2核4G 学生机，负载能力有限，请勿上传真实敏感信息！**
+>
+> 已有 20+ 用户使用，如果加载慢说明何二娃的服务器又在喘气了。
 
 <p align="center">
   <a href="https://he2wa.xin" target="_blank">
@@ -20,6 +22,10 @@
   </a>
   <img src="https://img.shields.io/badge/版本-v1.0.0-blue?style=flat-square" alt="Version" />
   <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="License" />
+  <img src="https://img.shields.io/github/stars/xiaoxiaoyu66/-resume-plus?style=flat-square&color=yellow" alt="Stars" />
+  <img src="https://img.shields.io/github/last-commit/xiaoxiaoyu66/-resume-plus?style=flat-square&color=orange" alt="Last Commit" />
+  <img src="https://img.shields.io/github/actions/workflow/status/xiaoxiaoyu66/-resume-plus/backend-ci.yml?style=flat-square&label=backend" alt="Backend CI" />
+  <img src="https://img.shields.io/github/actions/workflow/status/xiaoxiaoyu66/-resume-plus/frontend-ci.yml?style=flat-square&label=frontend" alt="Frontend CI" />
 </p>
 
 ---
@@ -27,12 +33,17 @@
 ## 演示视频
 
 <p align="center">
-  <video src="https://he2wa.xin/profile/demo-video/demo.mp4" controls width="80%" style="max-width:720px;border-radius:8px;">
-    您的浏览器不支持视频播放，请 <a href="https://he2wa.xin/profile/demo-video/demo.mp4">下载视频</a> 观看。
-  </video>
+  <a href="https://he2wa.xin/profile/demo-video/demo.mp4" target="_blank">
+    <img src="https://he2wa.xin/profile/demo-video/demo.mp4" alt="点击播放演示视频" width="80%" style="max-width:720px;border-radius:8px;border:2px solid #667eea;" onerror="this.style.display='none'">
+  </a>
+  <br/>
+  <sub>📹 点击上方图片播放演示视频（<a href="https://he2wa.xin/profile/demo-video/demo.mp4">直接下载 mp4</a>）</sub>
   <br/>
   <sub>简历解析 → AI 诊断 → 面试模拟 → 岗位匹配</sub>
 </p>
+
+> **GitHub 不支持内嵌视频播放。** 点击上方图片或 [此链接](https://he2wa.xin/profile/demo-video/demo.mp4) 在线观看。
+> 如果加载慢说明服务器在喘气，请耐心等待或下载后观看。
 
 
 ---
@@ -45,7 +56,18 @@
 
 > 作为学生项目，在工程规范上仍有提升空间。
 >
-> 注：本项目在开发过程中使用了 AI 辅助编程工具（Claude Code），但核心业务逻辑架构与系统设计均由人工完成。
+> 注：本项目在开发过程中使用了 AI 辅助编程工具（Claude Code），但**核心业务逻辑架构与系统设计均由人工完成**。每一行代码都经过理解和修改。
+
+<p align="center">
+  <a href="#-功能矩阵">功能矩阵</a> •
+  <a href="#-技术栈">技术栈</a> •
+  <a href="#-系统架构">架构</a> •
+  <a href="#-设计备忘">设计备忘</a> •
+  <a href="#-安全体系">安全</a> •
+  <a href="#-快速开始">快速开始</a> •
+  <a href="#-项目结构">结构</a> •
+  <a href="#-路线图">路线图</a>
+</p>
 
 ---
 
@@ -119,7 +141,7 @@
 
 ## 系统架构
 
-![系统架构图](https://he2wa.xin/architecture.svg)
+![系统架构图](https://raw.githubusercontent.com/xiaoxiaoyu66/-resume-plus/master/docs/architecture.svg)
 
 ---
 
@@ -204,7 +226,14 @@
 - JDK 17+
 - Maven 3.8+
 
-### 1. 启动依赖服务
+### 1. 启动依赖服务（推荐 Docker Compose）
+
+```bash
+# 一条命令启动所有依赖（MySQL + Redis + PostgreSQL + Gotenberg）
+docker compose -f docker-compose.prod.yml up -d mysql redis postgres gotenberg
+```
+
+或用 `docker run` 逐个启动：
 
 ```bash
 # MySQL 8.0
@@ -216,7 +245,7 @@ docker run -d --name redis -p 6379:6379 redis:7
 # PostgreSQL + PGVector（不用岗位匹配可跳过）
 docker run -d --name postgres -e POSTGRES_PASSWORD=your-password -p 5433:5432 pgvector/pgvector:pg16
 
-# MinIO（可选）
+# MinIO（可选，文件存储用）
 docker run -d --name minio -p 9000:9000 -p 9001:9001 minio/minio server /data --console-address ":9001"
 
 # Gotenberg（可选，前端有 jsPDF 兜底）
